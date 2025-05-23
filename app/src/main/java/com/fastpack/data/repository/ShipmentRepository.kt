@@ -3,6 +3,13 @@ package com.fastpack.data.repository
 import android.util.Log
 import com.fastpack.data.model.ShipmentResponse
 import com.fastpack.data.remote.ShipmentService
+import com.fastpack.data.repository.ShipmentRepository.ShipmentAnalysisKeys.DESP_PENDIENTES
+import com.fastpack.data.repository.ShipmentRepository.ShipmentAnalysisKeys.DESP_READY_TO_PREPARE
+import com.fastpack.data.repository.ShipmentRepository.ShipmentAnalysisKeys.DESP_READY_TO_PRINT
+import com.fastpack.data.repository.ShipmentRepository.ShipmentAnalysisKeys.FLEX_PENDIENTES
+import com.fastpack.data.repository.ShipmentRepository.ShipmentAnalysisKeys.FLEX_READY_TO_PREPARE
+import com.fastpack.data.repository.ShipmentRepository.ShipmentAnalysisKeys.FLEX_READY_TO_PRINT
+import com.fastpack.data.repository.ShipmentRepository.ShipmentAnalysisKeys.TOTAL_ENVIOS
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -70,7 +77,6 @@ class ShipmentRepository @Inject constructor(
 
     // Esta es la función que el ViewModel llamará
     suspend fun fetchAndAnalyzeShipmentsForPacking(): Result<Map<String, Int>> {
-        // PASO 1 INTERNO DEL REPO: Llama a una función que usa el SERVICE
         val shipmentsResult = getShipmentsForPackingFromService()
 
         return shipmentsResult.fold(
@@ -78,7 +84,6 @@ class ShipmentRepository @Inject constructor(
                 if (shipmentList.isEmpty()) {
                     Result.success(createEmptyAnalysisMap())
                 } else {
-                    // PASO 2 INTERNO DEL REPO: Llama a SU PROPIA función de análisis
                     val analysis = analyzeShipments(shipmentList)
                     Result.success(analysis)
                 }
@@ -106,44 +111,62 @@ class ShipmentRepository @Inject constructor(
     }
 
     fun analyzeShipments(shipments: List<ShipmentResponse>): Map<String, Int> {
-        val totalEnvios = shipments.size
-        var flexReadyToPrint = 0
-        var flexPendientes = 0
-        var despReadyToPrint = 0
-        var despPendientes = 0
+        if (shipments.isEmpty()) return createEmptyAnalysisMap()
+
+        val counts = mutableMapOf(
+            TOTAL_ENVIOS to shipments.size,
+            FLEX_READY_TO_PRINT to 0,
+            FLEX_READY_TO_PREPARE to 0,
+            FLEX_PENDIENTES to 0,
+            DESP_READY_TO_PRINT to 0,
+            DESP_READY_TO_PREPARE to 0,
+            DESP_PENDIENTES to 0
+        )
 
         for (shipment in shipments) {
-            if (shipment.logisticType == "self_service") {
-                if (shipment.substatus == "ready_to_print") {
-                    flexReadyToPrint++
-                } else {
-                    flexPendientes++
+            when (shipment.logisticType) {
+                "self_service" -> {
+                    if (shipment.substatus == "ready_to_print") {
+                        if (shipment.shippedItemsPhoto != null) {
+                            counts[FLEX_READY_TO_PREPARE] = counts[FLEX_READY_TO_PREPARE]!! + 1
+                        } else counts[FLEX_READY_TO_PRINT] = counts[FLEX_READY_TO_PRINT]!! + 1
+                    } else {
+                        counts[FLEX_PENDIENTES] = counts[FLEX_PENDIENTES]!! + 1
+                    }
                 }
-            } else {
-                if (shipment.substatus == "ready_to_print") {
-                    despReadyToPrint++
-                } else {
-                    despPendientes++
+                else -> { // Asumiendo que cualquier otra cosa es "despacho" excepto Fullfilment que ni llegan
+                    if (shipment.substatus == "ready_to_print") {
+                        if (shipment.shippedItemsPhoto != null) {
+                            counts[DESP_READY_TO_PREPARE] = counts[DESP_READY_TO_PREPARE]!! + 1
+                        } else counts[DESP_READY_TO_PRINT] = counts[DESP_READY_TO_PRINT]!! + 1
+                    } else {
+                        counts[DESP_PENDIENTES] = counts[DESP_PENDIENTES]!! + 1
+                    }
                 }
             }
         }
-
-        return mapOf(
-            "TotalEnvios" to totalEnvios,
-            "FlexReadyToPrint" to flexReadyToPrint,
-            "FlexPendientes" to flexPendientes,
-            "DespReadyToPrint" to despReadyToPrint,
-            "DespPendientes" to despPendientes
-        )
+        return counts
     }
 
     private fun createEmptyAnalysisMap(): Map<String, Int> {
         return mapOf(
-            "TotalEnvios" to 0,
-            "FlexReadyToPrint" to 0,
-            "FlexPendientes" to 0,
-            "DespReadyToPrint" to 0,
-            "DespPendientes" to 0
+            TOTAL_ENVIOS to 0,
+            FLEX_READY_TO_PRINT to 0,
+            FLEX_READY_TO_PREPARE to 0,
+            FLEX_PENDIENTES to 0,
+            DESP_READY_TO_PRINT to 0,
+            DESP_READY_TO_PREPARE to 0,
+            DESP_PENDIENTES to 0
         )
+    }
+
+    object ShipmentAnalysisKeys {
+        const val TOTAL_ENVIOS = "TotalEnvios"
+        const val FLEX_READY_TO_PRINT = "FlexReadyToPrint"
+        const val FLEX_READY_TO_PREPARE = "FlexReadyToPrepare"
+        const val FLEX_PENDIENTES = "FlexPendientes"
+        const val DESP_READY_TO_PRINT = "DespReadyToPrint"
+        const val DESP_READY_TO_PREPARE = "DespReadyToPrepare"
+        const val DESP_PENDIENTES = "DespPendientes"
     }
 }

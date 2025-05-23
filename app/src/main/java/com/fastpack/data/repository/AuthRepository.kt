@@ -4,7 +4,7 @@ import com.fastpack.data.model.AuthResponse
 import com.fastpack.data.model.UserRequest
 import com.fastpack.data.preferences.UserPreferencesRepository
 import com.fastpack.data.remote.AuthService
-import com.fastpack.util.Resource // Tu clase Resource
+import com.fastpack.util.Resource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import retrofit2.Response
@@ -72,7 +72,7 @@ class AuthRepository @Inject constructor(
                 } else {
                     Resource.Error("Respuesta de registro exitosa pero cuerpo vacío.", null)
                 }
-            } else { // <--- ELSE CORRECTO CON BLOQUE DE LLAVES
+            } else {
                 val errorBody = response.errorBody()?.string()
                 val errorMessage = if (errorBody.isNullOrBlank()) {
                     "Error de registro: ${response.code()} ${response.message()}"
@@ -80,8 +80,8 @@ class AuthRepository @Inject constructor(
                     errorBody
                 }
                 Resource.Error(errorMessage, null)
-            } // <--- CIERRE DEL BLOQUE ELSE
-        } catch (e: Exception) { // <--- CIERRE DEL BLOQUE TRY Y COMIENZO DEL CATCH
+            }
+        } catch (e: Exception) {
             Resource.Error(e.message ?: "Error de red o desconocido en registro.", null)
         }
     }

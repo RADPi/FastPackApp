@@ -27,8 +27,8 @@ import dagger.hilt.android.AndroidEntryPoint
 
 // Define tus destinos para la Bottom Navigation Bar (si la usas)
 sealed class MainScreen(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    object Home : MainScreen("home_main", "Inicio", Icons.Filled.Home)
-    object Settings : MainScreen("settings_main", "Ajustes", Icons.Filled.Settings)
+    object Home : MainScreen(AppScreen.Home.route, "Inicio", Icons.Filled.Home)
+    object Settings : MainScreen(AppScreen.Settings.route, "Ajustes", Icons.Filled.Settings)
     // Agrega más destinos principales aquí
 }
 
@@ -51,11 +51,16 @@ class MainActivity : ComponentActivity() {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
 
-                val shouldShowMainScaffoldBars = currentDestination?.route !in listOf(
-                    AppScreen.Login.route,
-                    AppScreen.Register.route
-                    // Agrega aquí otras rutas que NO deben mostrar las barras principales
-                )
+                // Si currentDestination es null, asumimos que estamos yendo a una pantalla
+                // que NO debería tener las barras principales (como Login, tu startDestination).
+                // O puedes ser más explícito con la startDestination.
+                val shouldShowMainScaffoldBars = currentDestination?.route?.let { route ->
+                    route !in listOf(
+                        AppScreen.Login.route,
+                        AppScreen.Register.route
+                    )
+                } == true // Si currentDestination?.route es null, consideramos false (no mostrar barras principales)
+
 
                 if (shouldShowMainScaffoldBars) {
                     // Scaffold para las pantallas principales (Home, Settings, etc.)
@@ -78,7 +83,10 @@ class MainActivity : ComponentActivity() {
                     // Scaffold simple para Login/Register o pantallas sin barras comunes
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
-                        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+                        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+                        topBar = {
+                            LoginRegisterTopBar() // Usamos la TopBar dedicada
+                        }
                     ) { innerPadding ->
                         AppNavigation(
                             navController = navController,
@@ -93,13 +101,26 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun LoginRegisterTopBar() {
+    TopAppBar(
+        title = { Text("FastPack") },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color(0xFF343A40), // Tu estilo
+            titleContentColor = Color.White
+        )
+        // Sin navigationIcon si no lo necesitas aquí
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun AppTopBar(navController: NavController, currentDestination: androidx.navigation.NavDestination?) {
     // Puedes personalizar el título y las acciones basado en el destino actual
     val title = when (currentDestination?.route) {
-        MainScreen.Home.route -> "Inicio FastPack"
+        MainScreen.Home.route -> "Resumen de Envíos Pendientes"
         MainScreen.Settings.route -> "Configuración"
         // ... otros títulos para pantallas principales
-        else -> "FastPack" // Título por defecto o para sub-pantallas
+        else -> "FastPack - Defecto" // Título por defecto o para sub-pantallas
     }
 
     // Mostrar botón de retroceso si no estamos en un destino principal de la bottom bar
@@ -165,7 +186,7 @@ fun AppNavigation(navController: androidx.navigation.NavHostController, modifier
             LoginScreen(
                 // viewModel se inyecta automáticamente por Hilt
                 onNavigateToHome = {
-                    navController.navigate(AppScreen.Home.route) { // Usar AppScreen.Home.route
+                    navController.navigate(AppScreen.Home.route) {
                         popUpTo(AppScreen.Login.route) { inclusive = true }
                     }
                 },
@@ -178,7 +199,7 @@ fun AppNavigation(navController: androidx.navigation.NavHostController, modifier
             RegisterScreen(
                 // viewModel se inyecta automáticamente por Hilt
                 onNavigateToHome = {
-                    navController.navigate(AppScreen.Home.route) { // Usar AppScreen.Home.route
+                    navController.navigate(AppScreen.Home.route) {
                         // Limpiar backstack de login y register
                         popUpTo(AppScreen.Login.route) { inclusive = true }
                     }

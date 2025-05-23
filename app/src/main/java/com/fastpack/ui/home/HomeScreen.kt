@@ -33,6 +33,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.fastpack.data.repository.ShipmentRepository.ShipmentAnalysisKeys.DESP_PENDIENTES
+import com.fastpack.data.repository.ShipmentRepository.ShipmentAnalysisKeys.DESP_READY_TO_PREPARE
+import com.fastpack.data.repository.ShipmentRepository.ShipmentAnalysisKeys.DESP_READY_TO_PRINT
+import com.fastpack.data.repository.ShipmentRepository.ShipmentAnalysisKeys.FLEX_PENDIENTES
+import com.fastpack.data.repository.ShipmentRepository.ShipmentAnalysisKeys.FLEX_READY_TO_PREPARE
+import com.fastpack.data.repository.ShipmentRepository.ShipmentAnalysisKeys.FLEX_READY_TO_PRINT
+import com.fastpack.data.repository.ShipmentRepository.ShipmentAnalysisKeys.TOTAL_ENVIOS
 
 
 @ExperimentalMaterial3Api
@@ -87,13 +94,13 @@ fun ShipmentAnalysisContent(analysis: Map<String, Int>) {
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Resumen de Envíos Pendientes",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(bottom = 20.dp)
-        )
+//        Text(
+//            text = "Resumen de Envíos Pendientes",
+//            style = MaterialTheme.typography.headlineSmall,
+//            modifier = Modifier.padding(bottom = 20.dp)
+//        )
 
-        AnalysisCard("Total de Envíos", analysis["TotalEnvios"] ?: 0)
+        AnalysisCard("Total de Envíos", analysis[TOTAL_ENVIOS] ?: 0)
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -107,14 +114,20 @@ fun ShipmentAnalysisContent(analysis: Map<String, Int>) {
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             AnalysisCard(
-                "Para Imprimir",
-                analysis["FlexReadyToPrint"] ?: 0,
+                "Imprimir",
+                analysis[FLEX_READY_TO_PRINT] ?: 0,
                 Modifier.weight(1f)
             )
             Spacer(modifier = Modifier.width(8.dp))
             AnalysisCard(
-                "Para Retirar",
-                analysis["FlexPendientes"] ?: 0,
+                "Preparar",
+                analysis[FLEX_READY_TO_PREPARE] ?: 0,
+                Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            AnalysisCard(
+                "Listos",
+                analysis[FLEX_PENDIENTES] ?: 0,
                 Modifier.weight(1f)
             )
         }
@@ -131,14 +144,20 @@ fun ShipmentAnalysisContent(analysis: Map<String, Int>) {
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             AnalysisCard(
-                "Para Imprimir",
-                analysis["DespReadyToPrint"] ?: 0,
+                "Imprimir",
+                analysis[DESP_READY_TO_PRINT] ?: 0,
                 Modifier.weight(1f)
             )
             Spacer(modifier = Modifier.width(8.dp))
             AnalysisCard(
-                "Para Despachar",
-                analysis["DespPendientes"] ?: 0,
+                "Preparar",
+                analysis[DESP_READY_TO_PREPARE] ?: 0,
+                Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            AnalysisCard(
+                "Listos",
+                analysis[DESP_PENDIENTES] ?: 0,
                 Modifier.weight(1f)
             )
         }
