@@ -1,0 +1,151 @@
+[versions]
+# --- Android y Herramientas de Compilación ---
+agp = "8.10.0" # Versión del Android Gradle Plugin
+kotlin = "2.0.21" # Versión de Kotlin (compilador y plugin)
+# KSP (Kotlin Symbol Processing) - Asegúrate de que la versión del plugin KSP coincida con la de Kotlin.
+# La versión de KSP suele tener el formato <kotlin_version>-<ksp_patch_version>.
+ksp = "2.0.21-1.0.28"
+
+# --- Jetpack Core y Lifecycle ---
+coreKtx = "1.16.0"
+lifecycleRuntimeKtx = "2.9.0"
+lifecycleViewmodelKtx = "2.9.0" # ViewModel con soporte para coroutines y estado
+
+# --- Jetpack Compose ---
+activityCompose = "1.10.1" # Integración de Compose con Activity
+# Compose Bill of Materials (BOM) - Gestiona versiones de librerías de Compose
+# Asegúrate de que esta versión de BOM sea compatible con tu versión de Kotlin/Compose Compiler.
+# "2024.09.00" es una versión futura; la actual podría ser "2024.05.00" o similar. Verifica la última estable.
+# La versión del plugin de Compose Compiler (kotlin-compose) está ligada a la versión de Kotlin.
+composeBom = "2024.09.00"
+
+# --- Jetpack Navigation ---
+navigationCompose = "2.9.0" # Navegación para Jetpack Compose
+navigationFragmentKtx = "2.9.0" # Navegación para Fragments (si aún los usas)
+navigationUiKtx = "2.9.0" # Componentes UI para Navigation (si usas vistas tradicionales con Navigation)
+
+# --- Pruebas ---
+junit = "4.13.2" # JUnit 4 para pruebas unitarias
+junitVersion = "1.2.1" # AndroidX Test JUnit extension
+espressoCore = "3.6.1" # AndroidX Test Espresso para pruebas de UI
+
+# --- Networking (OkHttp y Retrofit) ---
+okhttp = "4.12.0" # Cliente HTTP
+loggingInterceptor = "4.12.0" # Interceptor para logs de OkHttp (misma versión que OkHttp es común)
+retrofit = "2.11.0" # Cliente HTTP type-safe para Android y Java
+# Convertidor de Retrofit para kotlinx.serialization
+retrofit2KotlinxSerializationConverter = "1.0.0"
+
+# --- Coroutines ---
+kotlinxCoroutines = "1.8.1"
+
+# --- Serialización ---
+# El plugin de kotlinx-serialization debe coincidir con tu versión de Kotlin.
+kotlinxSerializationPlugin = "2.0.21"
+kotlinxSerializationJson = "1.7.3" # Librería para serialización JSON
+
+# --- Inyección de Dependencias (Hilt) ---
+hilt = "2.52" # Hilt para inyección de dependencias
+hiltNavigationCompose = "1.1.0" # Integración de Hilt con Navigation Compose
+
+# --- UI (Material Design) ---
+material = "1.12.0" # Componentes de Material Design (para vistas tradicionales, no Compose Material 3)
+# androidx-material3 ya se obtiene a través del composeBom, no necesita versión aquí.
+
+# --- DatastorePreferences ---
+datastorePreferences = "1.1.1"
+
+# --- Zxing QR Reader ---
+zxingAndroidEmbedded = "4.3.0"
+
+# --- CameraX core y camera2 --- #
+cameraCore = "1.4.2"
+barcodeScanning = "17.3.0"
+##########################################################################################
+[libraries]
+# --- Kotlin Standard Library ---
+kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }
+
+# --- Jetpack Core ---
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+
+# --- Jetpack Lifecycle ---
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewmodelKtx" }
+
+# --- Jetpack Compose ---
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-ui = { group = "androidx.compose.ui", name = "ui" } # Sin versión, gestionada por BOM
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" } # Sin versión, gestionada por BOM
+androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" } # Sin versión, gestionada por BOM (para previews)
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" } # Sin versión, gestionada por BOM
+androidx-material3 = { group = "androidx.compose.material3", name = "material3" } # Sin versión, gestionada por BOM
+
+# --- Jetpack Navigation ---
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+androidx-navigation-fragment-ktx = { group = "androidx.navigation", name = "navigation-fragment-ktx", version.ref = "navigationFragmentKtx" }
+androidx-navigation-ui-ktx = { group = "androidx.navigation", name = "navigation-ui-ktx", version.ref = "navigationUiKtx" }
+
+# --- Pruebas ---
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+# Compose UI Tests (gestionadas por BOM si se declaran sin versión)
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+
+# --- Networking (OkHttp y Retrofit) ---
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "loggingInterceptor" }
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit2-kotlinx-serialization-converter = { group = "com.jakewharton.retrofit", name = "retrofit2-kotlinx-serialization-converter", version.ref = "retrofit2KotlinxSerializationConverter" }
+
+# --- Coroutines ---
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
+
+# --- Serialización ---
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+
+# --- Inyección de Dependencias (Hilt) ---
+hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
+hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt" } # Para el procesador de anotaciones (kapt o ksp)
+androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+
+# --- UI (Material Design - Vistas Tradicionales) ---
+# Esta es para el sistema de vistas tradicional, no para Compose.
+# Si tu app es 100% Compose, quizás no la necesites directamente en `app`,
+# pero algunas librerías podrían tenerla como dependencia transitiva.
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+
+# --- DatastorePreferences --- #
+androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
+
+# --- Zxing QR Reader --- #
+journeyapps-zxing-android-embedded = { group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxingAndroidEmbedded" }
+
+# --- CameraX core y camera2 --- #
+androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraCore" }
+androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "cameraCore" }
+androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraCore" }
+androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "cameraCore" }
+# Para análisis de códigos QR
+barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "barcodeScanning" }
+
+
+##########################################################################################
+[plugins]
+# --- Plugins de Gradle Esenciales ---
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+# Plugin de Kotlin Compose Compiler (asociado a la versión de Kotlin)
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+# KSP (Kotlin Symbol Processing)
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp"}
+
+# --- Inyección de Dependencias (Hilt) ---
+hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+
+# --- Serialización ---
+kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinxSerializationPlugin" }

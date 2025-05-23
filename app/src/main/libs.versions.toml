@@ -1,0 +1,64 @@
+[versions]
+agp = "8.10.0" # Asegúrate que esta es la versión correcta de tu Android Gradle Plugin
+kotlin = "2.0.21"
+coreKtx = "1.16.0"
+junit = "4.13.2"
+junitVersion = "1.2.1"
+espressoCore = "3.6.1"
+lifecycleRuntimeKtx = "2.9.0"
+activityCompose = "1.10.1"
+composeBom = "2024.09.00"
+# composeCompiler = "1.5.3" # Ejemplo, ajusta a tu versión de Kotlin si es necesario explícitamente
+material = "1.12.0"
+lifecycleViewmodelKtx = "2.9.0"
+retrofit = "2.11.0"
+kotlinxSerializationJson = "1.7.3"
+retrofit2KotlinxSerializationConverter = "1.0.0"
+hilt = "2.48.1" # Versión unificada para plugin y librerías Hilt
+# hiltAndroid = "2.52" # Comentado para usar la versión 'hilt' unificada
+hiltNavigationCompose = "1.1.0" # O la versión más reciente compatible
+navigationCompose = "2.9.0" # O la versión más reciente compatible
+navigationFragmentKtx = "2.9.0"
+navigationUiKtx = "2.9.0"
+kotlinxSerializationPlugin = "2.0.21" # Debe coincidir con tu versión de Kotlin
+ksp = "2.0.21-1.0.28" # Asegúrate que es la correcta para tu versión de Kotlin (kotlin-2.0.21-ksp -> 2.0.21-1.0.x)
+# Para ksp = "2.0.21-1.0.20" si usas Kotlin 2.0.21, por ejemplo. Verifica la compatibilidad.
+# La versión de KSP generalmente es <kotlin_version>-<ksp_subversion>
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" } # Esta es para Views, ¿la necesitas con Compose puro?
+androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewmodelKtx" }
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+retrofit2-kotlinx-serialization-converter = { group = "com.jakewharton.retrofit", name = "retrofit2-kotlinx-serialization-converter", version.ref = "retrofit2KotlinxSerializationConverter" }
+
+# Hilt - Usando la versión 'hilt' unificada
+hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" } # Añadido para KSP/Kapt
+
+androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+androidx-navigation-fragment-ktx = { group = "androidx.navigation", name = "navigation-fragment-ktx", version.ref = "navigationFragmentKtx" } # ¿Lo necesitas si usas solo Compose Navigation?
+androidx-navigation-ui-ktx = { group = "androidx.navigation", name = "navigation-ui-ktx", version.ref = "navigationUiKtx" } # ¿Lo necesitas si usas solo Compose Navigation?
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" } # Plugin de Compose
+hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" } # Plugin de Hilt
+kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinxSerializationPlugin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
