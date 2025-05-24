@@ -28,8 +28,8 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideBaseUrl(): String = if (BuildConfig.DEBUG) {
-        "http://10.0.2.2:3000/" // URL para emulador Android (localhost de tu máquina)
-//        "http://192.168.86.39:3000/" // Si pruebas en dispositivo físico en la misma red
+//        "http://10.0.2.2:3000/" // URL para emulador Android (localhost de tu máquina)
+        "http://192.168.86.39:3000/" // Si pruebas en dispositivo físico en la misma red
     } else {
         "http://127.0.0.1:3000/" // URL de producción
     }
@@ -37,9 +37,11 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideJson(): Json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-        prettyPrint = true // Útil para debug
+        ignoreUnknownKeys = true // Ignora campos en el JSON que no están en tu data class
+        isLenient = true         // Permite un formato JSON más permisivo (ej. strings sin comillas para enums)
+        prettyPrint = false      // Para producción, deshabilita el pretty print
+        encodeDefaults = false   // No incluye valores predeterminados durante la serialización (envío de datos)
+        coerceInputValues = true // Intenta coaccionar valores (ej. null a un valor por defecto si está definido)
     }
 
     @Provides

@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun RegisterScreen( // <--- No se pasa NavController aquí directamente
     viewModel: RegisterViewModel = hiltViewModel(),
-    onNavigateToHome: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState() // Consistente con LoginScreen
@@ -29,8 +29,8 @@ fun RegisterScreen( // <--- No se pasa NavController aquí directamente
                 is RegisterEffect.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(effect.message)
                 }
-                RegisterEffect.NavigateToHome -> {
-                    onNavigateToHome()
+                RegisterEffect.NavigateToSettings -> {
+                    onNavigateToSettings()
                 }
                 RegisterEffect.NavigateToLogin -> {
                     onNavigateToLogin()
@@ -51,6 +51,15 @@ fun RegisterScreen( // <--- No se pasa NavController aquí directamente
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Image(painterResource(R.drawable.logofp250), contentDescription = "Logo", modifier = Modifier.size(250.dp))
+
+                OutlinedTextField(
+                    value = uiState.usernameInput,
+                    onValueChange = { viewModel.onEvent(RegisterUiEvent.UsernameChanged(it)) },
+                    label = { Text("Nombre de usuario") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
                     value = uiState.emailInput,

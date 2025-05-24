@@ -142,12 +142,14 @@ data class FastPackInfo(
 )
 
 @Serializable
-data class ShippingItem( // Mongoose: Array (asumiendo que los elementos son como el JSON de ejemplo)
-    val id: String? = null,
+data class ShippingItem(
+    @SerialName("id") val id: String? = null,
     val description: String? = null,
     val quantity: Int? = null,
-    val dimensions: String? = null,
-    @SerialName("dimensions_source") val dimensionsSource: DimensionsSource? = null
+    @SerialName("variation_id") val variationId: Long? = null, // Asumiendo Long por el ejemplo numérico
+    @SerialName("variation_name") val variationName: String? = null,
+    val picture: String? = null, // Ya se llama 'picture' en el JSON, no necesita @SerialName si el nombre de la propiedad es igual
+    @SerialName("seller_custom_field") val sellerCustomField: String? = null
 )
 
 @Serializable

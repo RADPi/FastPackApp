@@ -75,7 +75,23 @@ class ShipmentRepository @Inject constructor(
         }
     }
 
-    // Esta es la función que el ViewModel llamará
+    suspend fun updateShipment(shipmentToUpdate: ShipmentResponse): Result<ShipmentResponse?> {
+
+        return try {
+
+            val response = shipmentService.updateShipment(shipmentToUpdate.id, shipmentToUpdate)
+
+            if (response.isSuccessful) {
+                Result.success(response.body())
+            } else {
+                Result.failure(Exception("Error de API al actualizar: ${response.code()} - ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Log.e("ShipmentRepository", "Excepción al actualizar shipment ${shipmentToUpdate.id}", e)
+            Result.failure(e)
+        }
+    }
+
     suspend fun fetchAndAnalyzeShipmentsForPacking(): Result<Map<String, Int>> {
         val shipmentsResult = getShipmentsForPackingFromService()
 
@@ -94,7 +110,6 @@ class ShipmentRepository @Inject constructor(
         )
     }
 
-    // Función interna del repo que usa el ShipmentService
     private suspend fun getShipmentsForPackingFromService(): Result<List<ShipmentResponse>> {
         return try {
             // AQUÍ SE LLAMA A shipmentService.getShipmentsForPacking()
@@ -110,7 +125,7 @@ class ShipmentRepository @Inject constructor(
         }
     }
 
-    fun analyzeShipments(shipments: List<ShipmentResponse>): Map<String, Int> {
+    private fun analyzeShipments(shipments: List<ShipmentResponse>): Map<String, Int> {
         if (shipments.isEmpty()) return createEmptyAnalysisMap()
 
         val counts = mutableMapOf(

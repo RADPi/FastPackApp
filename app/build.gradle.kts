@@ -136,7 +136,7 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
 
     // --- Zxing QR Reader ---
-    implementation(libs.journeyapps.zxing.android.embedded)
+//    implementation(libs.journeyapps.zxing.android.embedded)
 
     // --- CameraX core y camera2 ---
     implementation(libs.androidx.camera.core)
@@ -145,6 +145,11 @@ dependencies {
     implementation(libs.androidx.camera.view)
     // Para análisis de códigos QR
     implementation(libs.barcode.scanning)
+
+    // Coil para carga de imágenes
+    implementation(libs.coil.compose)
+
+    implementation(libs.accompanist.permissions) // Verifica la última versión
 
     // --- Pruebas Unitarias ---
     testImplementation(libs.junit)

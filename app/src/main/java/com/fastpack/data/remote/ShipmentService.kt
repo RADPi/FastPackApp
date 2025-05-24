@@ -2,7 +2,9 @@ package com.fastpack.data.remote
 
 import com.fastpack.data.model.ShipmentResponse // <-- IMPORTA TU NUEVO MODELO
 import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.http.QueryMap
@@ -39,4 +41,10 @@ interface ShipmentService {
 
     @GET("api/shipments/for-packing")
     suspend fun getShipmentsForPacking(): Response<List<ShipmentResponse>>
+
+    @PUT("api/shipments/{id}")
+    suspend fun updateShipment(
+        @Path("id") shipmentId: Long,
+        @Body shipment: ShipmentResponse
+    ): Response<ShipmentResponse>
 }

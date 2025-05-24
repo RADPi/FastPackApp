@@ -1,5 +1,6 @@
 package com.fastpack.data.repository
 
+import android.util.Log
 import com.fastpack.data.model.AuthResponse
 import com.fastpack.data.model.UserRequest
 import com.fastpack.data.preferences.UserPreferencesRepository
@@ -56,32 +57,42 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    suspend fun registerUser(userRequest: UserRequest /* o RegisterRequest */): Resource<AuthResponse> {
+    // En AuthRepository.kt
+    suspend fun registerUser(userRequest: UserRequest): Resource<AuthResponse> {
+        Log.d("AuthRepository", "Intentando registro con: $userRequest") // Este log ya lo tienes
         return try {
             val response: Response<AuthResponse> = authService.registerUser(userRequest)
 
             if (response.isSuccessful) {
                 val authData = response.body()
                 if (authData != null) {
-                    // Decidir si guardar el token al registrar o no.
-                    // Ejemplo:
-                    // if (authData.token != null) {
-                    //     userPreferencesRepository.saveAuthToken(authData.token)
-                    // }
-                    Resource.Success(authData)
+                    if (authData.token != null) {
+                        Log.d("AuthRepository", "Token recibido del servidor: ${authData.token}")
+                        userPreferencesRepository.saveAuthToken(authData.token) // Guarda el token
+                        Log.d("AuthRepository", "Token guardado en UserPreferences.")
+                        Resource.Success(authData) // Devuelve AuthResponse CON EL TOKEN
+                    } else {
+                        Log.e("AuthRepository", "Registro exitoso pero el token es null en la respuesta del servidor.")
+                        // Importante: Si esto ocurre, el ViewModel no verá el token.
+                        Resource.Error("Registro exitoso pero el token no fue devuelto por el servidor.", null)
+                    }
                 } else {
+                    Log.e("AuthRepository", "Respuesta de registro exitosa pero cuerpo vacío.")
                     Resource.Error("Respuesta de registro exitosa pero cuerpo vacío.", null)
                 }
             } else {
+                // ... manejo de error ...
                 val errorBody = response.errorBody()?.string()
                 val errorMessage = if (errorBody.isNullOrBlank()) {
                     "Error de registro: ${response.code()} ${response.message()}"
                 } else {
                     errorBody
                 }
+                Log.e("AuthRepository", "Error en API de registro: $errorMessage")
                 Resource.Error(errorMessage, null)
             }
         } catch (e: Exception) {
+            Log.e("AuthRepository", "Excepción en registerUser: ${e.message}", e)
             Resource.Error(e.message ?: "Error de red o desconocido en registro.", null)
         }
     }

@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.fastpack.data.model.UserRequest // O tu RegisterRequest si es diferente y lo usas
 import com.fastpack.data.model.AuthResponse // Necesario para el tipo de Resource
 import com.fastpack.data.repository.AuthRepository
-import com.fastpack.util.Resource // Tu clase Resource
+import com.fastpack.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
@@ -14,6 +14,7 @@ import javax.inject.Inject
 
 // Estado de la UI
 data class RegisterScreenUiState(
+    val usernameInput: String = "",
     val emailInput: String = "",
     val passwordInput: String = "",
     // Añade otros campos si son necesarios para el registro (ej. nombre, confirmar contraseña)
@@ -22,6 +23,7 @@ data class RegisterScreenUiState(
 
 // Eventos de la UI
 sealed class RegisterUiEvent {
+    data class UsernameChanged(val username: String) : RegisterUiEvent()
     data class EmailChanged(val email: String) : RegisterUiEvent()
     data class PasswordChanged(val password: String) : RegisterUiEvent()
     // Añade otros eventos según los campos del registro
@@ -33,7 +35,7 @@ sealed class RegisterUiEvent {
 sealed class RegisterEffect {
     data class ShowSnackbar(val message: String) : RegisterEffect()
     object NavigateToLogin : RegisterEffect()
-    object NavigateToHome : RegisterEffect()
+    object NavigateToSettings : RegisterEffect()
 }
 
 @HiltViewModel
@@ -49,6 +51,9 @@ class RegisterViewModel @Inject constructor(
 
     fun onEvent(event: RegisterUiEvent) {
         when (event) {
+            is RegisterUiEvent.UsernameChanged -> {
+                _uiState.update { it.copy(usernameInput = event.username) }
+            }
             is RegisterUiEvent.EmailChanged -> {
                 _uiState.update { it.copy(emailInput = event.email) }
             }
@@ -69,36 +74,29 @@ class RegisterViewModel @Inject constructor(
     private fun registerUser() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
+            val username = _uiState.value.usernameInput
             val email = _uiState.value.emailInput
             val password = _uiState.value.passwordInput
 
             // Añade validaciones para otros campos si los tienes (nombre, confirmar contraseña, etc.)
-            if (email.isBlank() || password.isBlank()) {
+            if (username.isBlank() || email.isBlank() || password.isBlank()) {
                 _effect.send(RegisterEffect.ShowSnackbar("Email y contraseña son requeridos"))
                 _uiState.update { it.copy(isLoading = false) }
                 return@launch
             }
 
-            // Asumiendo que registerUser también usa UserRequest.
-            // Si tienes un RegisterRequest diferente con más campos, úsalo aquí.
-            val result: Resource<AuthResponse> = authRepository.registerUser(UserRequest(email = email,
-                password = password))
+            val result: Resource<AuthResponse> = authRepository.registerUser(
+                UserRequest(
+                    name = username,
+                    email = email,
+                    password = password
+                )
+            )
 
             when (result) {
                 is Resource.Success -> {
-                    // El registro fue exitoso según la API.
-                    // result.data contiene AuthResponse.
-                    // Aquí decides el siguiente paso:
-                    // 1. Mostrar mensaje y navegar a Login para que el usuario inicie sesión.
-                    // 2. Si el registro también guarda el token (configurado en AuthRepository), podrías navegar a Home.
-
-                    // Ejemplo: Navegar a Login después de un registro exitoso
-                    _effect.send(RegisterEffect.ShowSnackbar("Registro exitoso. Por favor, inicia sesión."))
-                    _effect.send(RegisterEffect.NavigateToLogin)
-
-                    // Ejemplo Alternativo: Si el registro loguea y guarda token (y AuthRepository lo hace):
-                    // _effect.send(RegisterEffect.ShowSnackbar("Registro exitoso."))
-                    // _effect.send(RegisterEffect.NavigateToHome)
+                     _effect.send(RegisterEffect.ShowSnackbar("Registro exitoso."))
+                     _effect.send(RegisterEffect.NavigateToSettings)
                 }
                 is Resource.Error -> {
                     _effect.send(RegisterEffect.ShowSnackbar(result.message ?: "Error en el registro desconocido"))

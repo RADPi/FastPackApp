@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -17,23 +18,26 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
-import com.fastpack.navigation.AppScreen // Asumo que tienes tus rutas definidas aquí
+import com.fastpack.navigation.AppScreen
 import com.fastpack.ui.home.HomeScreen
 import com.fastpack.ui.login.LoginScreen
+import com.fastpack.ui.prepare.PrepareScreen
 import com.fastpack.ui.register.RegisterScreen
-//import com.fastpack.ui.settings.SettingsScreen // Ejemplo de otra pantalla interna
+import com.fastpack.ui.settings.SettingsScreen
 import com.fastpack.ui.theme.FastPackTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 // Define tus destinos para la Bottom Navigation Bar (si la usas)
 sealed class MainScreen(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     object Home : MainScreen(AppScreen.Home.route, "Inicio", Icons.Filled.Home)
-    object Settings : MainScreen(AppScreen.Settings.route, "Ajustes", Icons.Filled.Settings)
+    object Prepare : MainScreen(AppScreen.Prepare.route, "Preparar", Icons.Filled.ShoppingCart)
+    object Settings : MainScreen(AppScreen.Settings.route, "Configuración", Icons.Filled.Settings)
     // Agrega más destinos principales aquí
 }
 
 val items = listOf(
     MainScreen.Home,
+    MainScreen.Prepare,
     MainScreen.Settings,
 )
 
@@ -118,6 +122,7 @@ fun AppTopBar(navController: NavController, currentDestination: androidx.navigat
     // Puedes personalizar el título y las acciones basado en el destino actual
     val title = when (currentDestination?.route) {
         MainScreen.Home.route -> "Resumen de Envíos Pendientes"
+        MainScreen.Prepare.route -> "Preparar envío"
         MainScreen.Settings.route -> "Configuración"
         // ... otros títulos para pantallas principales
         else -> "FastPack - Defecto" // Título por defecto o para sub-pantallas
@@ -198,8 +203,8 @@ fun AppNavigation(navController: androidx.navigation.NavHostController, modifier
         composable(AppScreen.Register.route) {
             RegisterScreen(
                 // viewModel se inyecta automáticamente por Hilt
-                onNavigateToHome = {
-                    navController.navigate(AppScreen.Home.route) {
+                onNavigateToSettings = {
+                    navController.navigate(AppScreen.Settings.route) {
                         // Limpiar backstack de login y register
                         popUpTo(AppScreen.Login.route) { inclusive = true }
                     }
@@ -213,9 +218,14 @@ fun AppNavigation(navController: androidx.navigation.NavHostController, modifier
         composable(AppScreen.Home.route) { // Usar AppScreen.Home.route
             HomeScreen(/*...*/)
         }
-//        composable(AppScreen.Settings.route) { // Usar AppScreen.Settings.route
-//            SettingsScreen(/*...*/)
-//        }
-        // ... otras rutas
+
+        composable(AppScreen.Prepare.route) { // Usar AppScreen.Prepare.route
+            PrepareScreen(/*...*/)
+        }
+
+        composable(AppScreen.Settings.route) { // Usar AppScreen.Settings.route
+            SettingsScreen(/*...*/)
+        }
+//         ... otras rutas
     }
 }

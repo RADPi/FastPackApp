@@ -17,7 +17,7 @@ activityCompose = "1.10.1" # Integración de Compose con Activity
 # Asegúrate de que esta versión de BOM sea compatible con tu versión de Kotlin/Compose Compiler.
 # "2024.09.00" es una versión futura; la actual podría ser "2024.05.00" o similar. Verifica la última estable.
 # La versión del plugin de Compose Compiler (kotlin-compose) está ligada a la versión de Kotlin.
-composeBom = "2024.09.00"
+composeBom = "2025.05.01"
 
 # --- Jetpack Navigation ---
 navigationCompose = "2.9.0" # Navegación para Jetpack Compose
@@ -61,6 +61,12 @@ zxingAndroidEmbedded = "4.3.0"
 # --- CameraX core y camera2 --- #
 cameraCore = "1.4.2"
 barcodeScanning = "17.3.0"
+
+# --- Coil para carga de imágenes --- #
+coilCompose = "2.6.0"
+
+# --- Permissions with Accompanist  --- #
+accompanistPermissions = "0.34.0"
 ##########################################################################################
 [libraries]
 # --- Kotlin Standard Library ---
@@ -123,7 +129,7 @@ material = { group = "com.google.android.material", name = "material", version.r
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
 
 # --- Zxing QR Reader --- #
-journeyapps-zxing-android-embedded = { group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxingAndroidEmbedded" }
+#journeyapps-zxing-android-embedded = { group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxingAndroidEmbedded" }
 
 # --- CameraX core y camera2 --- #
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraCore" }
@@ -133,7 +139,14 @@ androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "
 # Para análisis de códigos QR
 barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "barcodeScanning" }
 
+# --- Coil para carga de imágenes --- #
+coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 
+# --- Permissions with Accompanist  --- #
+accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
+
+
+##########################################################################################
 ##########################################################################################
 [plugins]
 # --- Plugins de Gradle Esenciales ---

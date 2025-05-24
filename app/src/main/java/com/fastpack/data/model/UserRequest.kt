@@ -5,7 +5,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class UserRequest(
-    val email: String, // o username
+    val name: String? = null,
+    val email: String,
     val password: String
 )
 
@@ -23,17 +24,17 @@ data class User(
     @SerialName("email") val email: String?,
     @SerialName("permissions") val permissions: List<String>?, // Asumiendo que es una lista de Strings
     @SerialName("roles") val roles: List<String>?, // Asumiendo que es una lista de Strings
-    @SerialName("fp_user") val fpUser: Int?,
     @SerialName("date") val date: String?, // Podrías usar un deserializador de fechas si lo necesitas como Date
     @SerialName("seller") val seller: Int?,
-    @SerialName("nickname") val nickname: String?,
-    @SerialName("aka") val aka: String?,
-    @SerialName("access_token") val accessToken: String?,
-    @SerialName("expires_on") val expiresOn: String?,
     @SerialName("CABA_ship") val cabaShip: String?,
     @SerialName("admin") val admin: Boolean?,
     @SerialName("adminFP") val adminFP: Boolean?,
     @SerialName("packer") val packer: Boolean?,
+    @SerialName("nickname") val nickname: String? = null, // Si no viene en el
+    @SerialName("fp_user") val fpUser: Int? = null,
+    @SerialName("aka") val aka: String? = null,
+    @SerialName("access_token") val accessToken: String? = null,
+    @SerialName("expires_on") val expiresOn: String? = null,
 )
 
 
