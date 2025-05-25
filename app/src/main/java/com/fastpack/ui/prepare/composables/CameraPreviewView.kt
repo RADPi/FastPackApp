@@ -59,10 +59,6 @@ fun CameraPreviewView(
             .setBarcodeFormats(
                 Barcode.FORMAT_QR_CODE,
                 Barcode.FORMAT_CODE_128,
-                Barcode.FORMAT_CODE_39,
-                Barcode.FORMAT_EAN_13,
-                Barcode.FORMAT_UPC_A,
-                Barcode.FORMAT_DATA_MATRIX
             )
             .build()
         BarcodeScanning.getClient(options)
@@ -187,21 +183,24 @@ class QrCodeAnalyzer(
                     if (barcodes.isNotEmpty()) {
                         for (barcode in barcodes) {
                             val rawValue = barcode.rawValue
-                            // Validación: 11 caracteres y todos numéricos
+                            // NUEVO: Obtener y registrar el formato del código de barras
+                            val barcodeFormat = barcode.format
+                            val formatString = getBarcodeFormatString(barcodeFormat) // Función helper
+
+                            Log.d("QrCodeAnalyzer", "Barcode detected. Value: $rawValue, Format ID: $barcodeFormat, Format Name: $formatString, Type: ${barcode.valueType}")
+
+                            // Validación existente: 11 caracteres y todos numéricos
                             if (rawValue != null && rawValue.length == 11 && rawValue.all { it.isDigit() }) {
                                 if (!hasScanned.getAndSet(true)) {
-                                    Log.d("QrCodeAnalyzer", "Valid barcode found: $rawValue")
+                                    Log.i("QrCodeAnalyzer", "VALID barcode found. Value: $rawValue, Format: $formatString. Processing...")
                                     onBarcodeScanned(rawValue) // Llama al callback
-                                    // No necesitas romper el bucle aquí si hasScanned ya está en true,
-                                    // el siguiente barcode válido no pasará el if(!hasScanned.getAndSet(true))
                                 }
-                                // Si quieres procesar solo el PRIMER código válido y luego detener el análisis
-                                // hasta un reset, puedes mantener el break o simplemente confiar en hasScanned.
-                                // break // Opcional: si solo te interesa el primero que cumpla
                             } else {
-                                Log.d("QrCodeAnalyzer", "Ignored barcode (format/type mismatch): ${barcode.rawValue}, Format: ${barcode.format}, Type: ${barcode.valueType}")
+                                Log.d("QrCodeAnalyzer", "Ignored barcode (failed validation or already processed). Value: $rawValue, Format: $formatString")
                             }
                         }
+                    } else {
+                        // Log.v("QrCodeAnalyzer", "No barcodes found in this frame.") // Opcional: para mucho detalle
                     }
                 }
                 .addOnFailureListener {
@@ -210,7 +209,6 @@ class QrCodeAnalyzer(
                 .addOnCompleteListener {
                     imageProxy.close()
                     isProcessing.set(false)
-                    // hasScanned se resetea externamente si se quiere permitir un nuevo escaneo
                 }
         } else {
             imageProxy.close()
@@ -221,8 +219,29 @@ class QrCodeAnalyzer(
     // Método para permitir un nuevo escaneo si es necesario
     fun reset() {
         hasScanned.set(false)
-        isProcessing.set(false) // También resetea isProcessing por si acaso
+        isProcessing.set(false)
         Log.d("QrCodeAnalyzer", "Analyzer reset for new scan.")
+    }
+
+    // NUEVO: Función helper para convertir el ID del formato a un nombre legible
+    private fun getBarcodeFormatString(format: Int): String {
+        return when (format) {
+            Barcode.FORMAT_UNKNOWN -> "UNKNOWN"
+            Barcode.FORMAT_ALL_FORMATS -> "ALL_FORMATS"
+            Barcode.FORMAT_CODE_128 -> "CODE_128"
+            Barcode.FORMAT_CODE_39 -> "CODE_39"
+            Barcode.FORMAT_CODE_93 -> "CODE_93"
+            Barcode.FORMAT_CODABAR -> "CODABAR"
+            Barcode.FORMAT_DATA_MATRIX -> "DATA_MATRIX"
+            Barcode.FORMAT_EAN_13 -> "EAN_13"
+            Barcode.FORMAT_EAN_8 -> "EAN_8"
+            Barcode.FORMAT_ITF -> "ITF"
+            Barcode.FORMAT_QR_CODE -> "QR_CODE"
+            Barcode.FORMAT_UPC_A -> "UPC_A"
+            Barcode.FORMAT_UPC_E -> "UPC_E"
+            Barcode.FORMAT_AZTEC -> "AZTEC"
+            else -> "OTHER (${format})"
+        }
     }
 }
 

@@ -7,15 +7,23 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items // Para items en LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -37,7 +45,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.autofill.ContentDataType
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -46,18 +53,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.FileProvider
-import coil.compose.AsyncImage // Para cargar imágenes desde URL
+import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.fastpack.BuildConfig
+import com.fastpack.R
 import com.fastpack.data.model.ShipmentResponse
-import com.fastpack.data.model.ShippingItem // Asegúrate que esta clase esté accesible
+import com.fastpack.data.model.ShippingItem
 import com.fastpack.ui.prepare.PrepareViewModel
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.Locale
-import com.fastpack.R
 import java.util.Date
-import kotlin.text.format
+import java.util.Locale
 
 // Función para crear URI temporal
 fun Context.createImageUri(): Uri {
@@ -83,7 +89,7 @@ fun ShipmentDetailsView(
     onConfirmPhotoClick: () -> Unit,
     onRetakePhotoClick: () -> Unit,
     onCancelPhotoClick: () -> Unit,
-    viewModel: PrepareViewModel
+    viewModel: PrepareViewModel,
 ) {
     val context = LocalContext.current
     var tempUriForCamera by rememberSaveable { mutableStateOf<Uri?>(null) }
@@ -91,7 +97,6 @@ fun ShipmentDetailsView(
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { success ->
-            Log.d("ShipmentDetailsView", "Camera Result: success=$success, tempUriForCamera=$tempUriForCamera, Current Orientation: ${context.resources.configuration.orientation}")
             if (success) {
                 tempUriForCamera?.let { uri ->
                     Log.d("ShipmentDetailsView", "Foto tomada con éxito: $uri")
@@ -233,7 +238,6 @@ fun ShipmentDetailsView(
                         onClick = {
                             val newUri = context.createImageUri()
                             tempUriForCamera = newUri
-                            Log.d("ShipmentDetailsView", "Launching camera with URI: $newUri, Current Orientation: ${context.resources.configuration.orientation}")
                             cameraLauncher.launch(newUri)
                         },
                         modifier = Modifier.fillMaxWidth(),
