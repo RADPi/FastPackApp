@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -36,7 +37,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun CameraPreviewView(
     modifier: Modifier = Modifier,
-    onBarcodeScanned: (String) -> Unit
+    onBarcodeScanned: (String) -> Unit,
+    onAnalyzerReady: ((() -> Unit) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -71,6 +73,10 @@ fun CameraPreviewView(
             onBarcodeScanned = onBarcodeScanned,
             scanner = barcodeScanner
         )
+    }
+
+    LaunchedEffect(qrCodeAnalyzer) {
+        onAnalyzerReady?.invoke { qrCodeAnalyzer.reset() }
     }
 
     // Ya no necesitamos 'var cameraProvider: ProcessCameraProvider? by remember { mutableStateOf(null) }'

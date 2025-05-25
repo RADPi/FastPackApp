@@ -124,7 +124,8 @@ fun PrepareScreen(
                         modifier = Modifier.fillMaxSize(),
                         onBarcodeScanned = { qrCode ->
                             viewModel.onQrCodeScanned(qrCode)
-                        }
+                        },
+                        onAnalyzerReady = { resetAction -> viewModel.resetScannerAction = resetAction } // Nueva lambda
                     )
                     // Puedes superponer el título aquí si lo deseas, aunque ya está en el TopAppBar
                     // Text("Escanee la etiqueta del envío", modifier = Modifier.align(Alignment.TopCenter).padding(16.dp))

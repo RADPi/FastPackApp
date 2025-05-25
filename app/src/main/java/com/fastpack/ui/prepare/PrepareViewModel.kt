@@ -56,7 +56,13 @@ class PrepareViewModel @Inject constructor(
     var tempPhotoUri by mutableStateOf<Uri?>(null)
         private set
 
-    // No es necesario _scannedQrCode si el flujo es directo a Loading y luego a fetchShipmentDetails
+    var resetScannerAction: (() -> Unit)? = null
+
+    fun onReadyToScanAgain() {
+        _uiState.value = PrepareScreenState.Scanning
+        resetScannerAction?.invoke()
+        Log.d("PrepareViewModel", "Retrying scan. Transitioning to Scanning and reset analyzer.")
+    }
 
     fun onCameraPermissionResult(isGranted: Boolean) {
         Log.d(
