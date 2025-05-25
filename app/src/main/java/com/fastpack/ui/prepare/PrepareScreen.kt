@@ -11,6 +11,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import com.fastpack.navigation.AppScreen
 import com.fastpack.ui.prepare.composables.CameraPreviewView
 import com.fastpack.ui.prepare.composables.ShipmentDetailsView // Asumo que este composable existe
 import com.google.accompanist.permissions.*
@@ -19,7 +22,8 @@ import com.google.accompanist.permissions.*
 @OptIn(ExperimentalPermissionsApi::class) // Para Accompanist Permissions
 @Composable
 fun PrepareScreen(
-    viewModel: PrepareViewModel = hiltViewModel()
+    viewModel: PrepareViewModel = hiltViewModel(),
+    onNavigateToHome: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -30,8 +34,17 @@ fun PrepareScreen(
     // Efecto para reaccionar a los cambios en el estado del permiso
     // y para la lógica inicial de comprobación de permisos.
     LaunchedEffect(cameraPermissionState.status) {
-        Log.d("PrepareScreen", "Camera permission status: ${cameraPermissionState.status}")
+        Log.d(
+            "PrepareScreen",
+            "Camera permission status: ${cameraPermissionState.status}"
+        )
         viewModel.onCameraPermissionResult(cameraPermissionState.status == PermissionStatus.Granted)
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.navigateToHome.collect {
+            onNavigateToHome()
+        }
     }
 
     Scaffold(
@@ -63,7 +76,10 @@ fun PrepareScreen(
                     // Si están concedidos, debería pasar a Scanning.
                     // Podrías mostrar un loader aquí si hay alguna comprobación inicial.
                     // O si el permiso se deniega y el usuario vuelve a la app.
-                    Log.d("PrepareScreen", "Current state: Idle. Waiting for permission check.")
+                    Log.d(
+                        "PrepareScreen",
+                        "Current state: Idle. Waiting for permission check."
+                    )
                     // Si llegamos aquí y el permiso NO está concedido, el usuario verá el estado RequestingPermission.
                     // Si el permiso SÍ está concedido, onCameraPermissionResult lo llevará a Scanning.
                     // Si el permiso está permanentemente denegado, RequestingPermission lo manejará.
@@ -86,18 +102,27 @@ fun PrepareScreen(
                         onPermissionGranted = {
                             // El LaunchedEffect ya maneja esto llamando a viewModel.onCameraPermissionResult(true)
                             // viewModel.onCameraPermissionResult(true) // -> esto cambiará el estado a Scanning
-                            Log.d("PrepareScreen", "Permission granted via RequestingPermission UI.")
+                            Log.d(
+                                "PrepareScreen",
+                                "Permission granted via RequestingPermission UI."
+                            )
                         },
                         onPermissionDenied = {
                             // El LaunchedEffect también llamará a viewModel.onCameraPermissionResult(false)
                             // Aquí podrías mostrar un mensaje más persistente si fue denegado permanentemente.
-                            Log.d("PrepareScreen", "Permission denied via RequestingPermission UI.")
+                            Log.d(
+                                "PrepareScreen",
+                                "Permission denied via RequestingPermission UI."
+                            )
                         }
                     )
                 }
 
                 PrepareScreenState.Scanning -> {
-                    Log.d("PrepareScreen", "Current state: Scanning. Showing CameraPreviewView.")
+                    Log.d(
+                        "PrepareScreen",
+                        "Current state: Scanning. Showing CameraPreviewView."
+                    )
                     CameraPreviewView(
                         modifier = Modifier.fillMaxSize(),
                         onQrCodeScanned = { qrCode ->
@@ -113,32 +138,88 @@ fun PrepareScreen(
                     CircularProgressIndicator()
                 }
 
-                is PrepareScreenState.ShowResult -> {
-                    Log.d("PrepareScreen", "Current state: ShowResult. Shipment ID: ${state.shipment.id}")
-                    // Aquí deberías tener un Composable para mostrar los detalles del envío
-                    // Ejemplo: ShipmentDetailsView(shipment = state.shipment)
-                    // Con un botón para escanear de nuevo
+                is PrepareScreenState.ShowResult -> { // state aquí es de tipo PrepareScreenState.ShowResult
+                    Log.d(
+                        "PrepareScreen",
+                        "Current state: ShowResult. Shipment ID: ${state.shipment.id}"
+                    )
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxSize().padding(16.dp)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
                     ) {
-                        ShipmentDetailsView(shipment = state.shipment) // Usa tu composable real
+                        ShipmentDetailsView(
+                            shipment = state.shipment,
+                            photoUri = state.photoUri, // Tomado del estado ShowResult
+                            isUploading = state.isUploading, // Tomado del estado ShowResult
+                            onTakePhotoClick = { uri ->
+                                viewModel.updateTempPhotoUri(uri)
+                            },
+                            onConfirmPhotoClick = {
+                                state.photoUri?.let { uri -> // Solo confirma si hay una URI
+                                    viewModel.uploadPhotoAndUpdateShipment(
+                                        context = context,
+                                        shipment = state.shipment,
+                                        photoUri = uri
+                                    )
+                                }
+                            },
+                            onRetakePhotoClick = {
+                                // La lógica para rehacer podría ser simplemente limpiar la URI temporal
+                                // y dejar que el usuario use el botón "Tomar Foto" de nuevo.
+                                // O si tienes un flujo más complejo (volver a la cámara directamente), ajústalo.
+                                viewModel.clearTempPhoto()
+                            },
+                            onCancelPhotoClick = {
+                                viewModel.clearTempPhoto() // Limpia la foto temporal si se cancela la vista previa
+                            },
+                            viewModel = viewModel // Pasas la instancia del ViewModel
+                        )
                         Spacer(modifier = Modifier.height(24.dp))
-                        Button(onClick = { viewModel.retryScanOrRequestPermission() }) { // O goBackToIdle() y que la UI maneje el flujo
+
+                        // Mostrar mensaje de éxito/error de subida
+                        state.uploadSuccess?.let { success ->
+                            val message =
+                                if (success) "¡Foto guardada con éxito!" else "Error al guardar la foto."
+                            val messageColor =
+                                if (success) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            Text(
+                                message,
+                                color = messageColor,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                            if (success) {
+                                // Podrías querer resetear el estado de uploadSuccess aquí si el mensaje es temporal
+                                // o tener un botón para "OK" o "Escanear Otro"
+                            }
+                        }
+
+
+                        Button(onClick = { viewModel.retryScanOrRequestPermission() }) {
                             Text("Escanear Otro Envío")
                         }
                     }
                 }
 
                 is PrepareScreenState.NoResult -> {
-                    Log.d("PrepareScreen", "Current state: NoResult. Scanned code: ${state.scannedCode}")
+                    Log.d(
+                        "PrepareScreen",
+                        "Current state: NoResult. Scanned code: ${state.scannedCode}"
+                    )
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxSize().padding(16.dp)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
                     ) {
-                        Text("No se encontró el envío con el código: ${state.scannedCode}", textAlign = TextAlign.Center)
+                        Text(
+                            "No se encontró el envío con el código: ${state.scannedCode}",
+                            textAlign = TextAlign.Center
+                        )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { viewModel.retryScanOrRequestPermission() }) {
                             Text("Reintentar Escaneo")
@@ -147,13 +228,22 @@ fun PrepareScreen(
                 }
 
                 is PrepareScreenState.Error -> {
-                    Log.d("PrepareScreen", "Current state: Error. Message: ${state.message}")
+                    Log.d(
+                        "PrepareScreen",
+                        "Current state: Error. Message: ${state.message}"
+                    )
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxSize().padding(16.dp)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
                     ) {
-                        Text("Error: ${state.message}", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.error)
+                        Text(
+                            "Error: ${state.message}",
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.error
+                        )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { viewModel.retryScanOrRequestPermission() }) {
                             Text("Reintentar")

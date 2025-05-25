@@ -59,6 +59,7 @@ datastorePreferences = "1.1.1"
 zxingAndroidEmbedded = "4.3.0"
 
 # --- CameraX core y camera2 --- #
+guava = "31.1-android"
 cameraCore = "1.4.2"
 barcodeScanning = "17.3.0"
 
@@ -67,6 +68,12 @@ coilCompose = "2.6.0"
 
 # --- Permissions with Accompanist  --- #
 accompanistPermissions = "0.34.0"
+
+# --- Cloudinary ---
+cloudinaryAndroid = "2.4.0"
+cloudinaryCore = "1.33.0"
+
+##########################################################################################
 ##########################################################################################
 [libraries]
 # --- Kotlin Standard Library ---
@@ -132,6 +139,7 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 #journeyapps-zxing-android-embedded = { group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxingAndroidEmbedded" }
 
 # --- CameraX core y camera2 --- #
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraCore" }
 androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "cameraCore" }
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraCore" }
@@ -145,6 +153,9 @@ coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose"
 # --- Permissions with Accompanist  --- #
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
 
+# --- Cloudinary ---
+cloudinary-android = { module = "com.cloudinary:cloudinary-android", version.ref = "cloudinaryAndroid" }
+cloudinary-core = { module = "com.cloudinary:cloudinary-core", version.ref = "cloudinaryCore" }
 
 ##########################################################################################
 ##########################################################################################

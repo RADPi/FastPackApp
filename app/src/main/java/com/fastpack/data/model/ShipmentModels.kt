@@ -33,7 +33,7 @@ data class ShipmentResponse(
     @SerialName("new_address") val newAddress: NewAddress? = null, // Nuevo de Mongoose
     @SerialName("fast_pack") val fastPack: FastPackInfo? = null,
     @SerialName("shipping_items") val shippingItems: List<ShippingItem>? = null, // Mongoose: Array
-    @SerialName("shipped_items_photo") val shippedItemsPhoto: ShippedItemsPhoto? = null, // Nuevo de Mongoose
+    @SerialName("shipped_items_photo") val shippedItemsPhoto: ShippedItemsPhoto? = null,
     @SerialName("shipping_option") val shippingOption: ShippingOption? = null,
     @SerialName("delivery_time") val deliveryTime: DeliveryTimeInfo? = null,
     val task: String? = null, // Nuevo de Mongoose

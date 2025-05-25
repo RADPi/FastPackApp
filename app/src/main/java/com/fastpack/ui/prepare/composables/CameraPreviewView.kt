@@ -12,6 +12,7 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -164,7 +165,7 @@ fun CameraPreviewView(
     //
     // **Por ahora, lo comentaré para basarnos en el comportamiento de `bindToLifecycle`.**
     // **Si sigues viendo problemas de recursos no liberados, podríamos reevaluarlo.**
-    /*
+
     DisposableEffect(lifecycleOwner) { // O `Unit` si solo quieres limpieza al salir del composable
         onDispose {
             Log.d("CameraPreviewView", "DisposableEffect: onDispose. Attempting to unbind all. LifecycleOwner: $lifecycleOwner")
@@ -187,7 +188,7 @@ fun CameraPreviewView(
             }
         }
     }
-    */
+
 }
 
 class QrCodeAnalyzer(

@@ -28,10 +28,17 @@ import com.fastpack.ui.theme.FastPackTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 // Define tus destinos para la Bottom Navigation Bar (si la usas)
-sealed class MainScreen(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+sealed class MainScreen(
+    val route: String,
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
     object Home : MainScreen(AppScreen.Home.route, "Inicio", Icons.Filled.Home)
-    object Prepare : MainScreen(AppScreen.Prepare.route, "Preparar", Icons.Filled.ShoppingCart)
-    object Settings : MainScreen(AppScreen.Settings.route, "Configuración", Icons.Filled.Settings)
+    object Prepare :
+        MainScreen(AppScreen.Prepare.route, "Preparar", Icons.Filled.ShoppingCart)
+
+    object Settings :
+        MainScreen(AppScreen.Settings.route, "Configuración", Icons.Filled.Settings)
     // Agrega más destinos principales aquí
 }
 
@@ -65,6 +72,20 @@ class MainActivity : ComponentActivity() {
                     )
                 } == true // Si currentDestination?.route es null, consideramos false (no mostrar barras principales)
 
+                val navigateToHomeFromPrepare = {
+                    navController.navigate(AppScreen.Home.route) {
+                        // PopUpTo para limpiar el backstack hasta un destino específico
+                        // o limpiar todo si vienes de un flujo que no debería permitir volver.
+                        // Ajusta según tus necesidades. Por ejemplo, si PrepareScreen
+                        // siempre debe llevar a Home sin poder volver a Prepare:
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            // O popUpTo(AppScreen.Prepare.route) { inclusive = true } si solo quieres salir de Prepare
+                            saveState = true // Opcional, si quieres guardar el estado de Home
+                        }
+                        launchSingleTop = true
+                        restoreState = true // Opcional
+                    }
+                }
 
                 if (shouldShowMainScaffoldBars) {
                     // Scaffold para las pantallas principales (Home, Settings, etc.)
@@ -72,15 +93,23 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                         topBar = {
-                            AppTopBar(navController = navController, currentDestination = currentDestination)
+                            AppTopBar(
+                                navController = navController,
+                                currentDestination = currentDestination,
+                            )
                         },
                         bottomBar = {
-                            AppBottomBar(navController = navController, currentDestination = currentDestination)
+                            AppBottomBar(
+                                navController = navController,
+                                currentDestination = currentDestination
+                            )
                         }
                     ) { innerPadding ->
                         AppNavigation(
                             navController = navController,
-                            modifier = Modifier.padding(innerPadding)
+                            modifier = Modifier.padding(innerPadding),
+                            navigateToHomeFromPrepare = navigateToHomeFromPrepare
+
                         )
                     }
                 } else {
@@ -94,7 +123,8 @@ class MainActivity : ComponentActivity() {
                     ) { innerPadding ->
                         AppNavigation(
                             navController = navController,
-                            modifier = Modifier.padding(innerPadding)
+                            modifier = Modifier.padding(innerPadding),
+                            navigateToHomeFromPrepare = navigateToHomeFromPrepare
                         )
                     }
                 }
@@ -118,7 +148,10 @@ fun LoginRegisterTopBar() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppTopBar(navController: NavController, currentDestination: androidx.navigation.NavDestination?) {
+fun AppTopBar(
+    navController: NavController,
+    currentDestination: androidx.navigation.NavDestination?
+) {
     // Puedes personalizar el título y las acciones basado en el destino actual
     val title = when (currentDestination?.route) {
         MainScreen.Home.route -> "Resumen de Envíos Pendientes"
@@ -152,14 +185,26 @@ fun AppTopBar(navController: NavController, currentDestination: androidx.navigat
 }
 
 @Composable
-fun AppBottomBar(navController: NavController, currentDestination: androidx.navigation.NavDestination?) {
+fun AppBottomBar(
+    navController: NavController,
+    currentDestination: androidx.navigation.NavDestination?
+) {
     NavigationBar(
         containerColor = Color(0xFF343A40) // Ejemplo de color
     ) {
         items.forEach { screen ->
             NavigationBarItem(
-                icon = { Icon(screen.icon, contentDescription = screen.label, tint = if (currentDestination?.hierarchy?.any { it.route == screen.route } == true) Color.White else Color.LightGray) },
-                label = { Text(screen.label, color = if (currentDestination?.hierarchy?.any { it.route == screen.route } == true) Color.White else Color.LightGray) },
+                icon = {
+                    Icon(
+                        screen.icon,
+                        contentDescription = screen.label,
+                        tint = if (currentDestination?.hierarchy?.any { it.route == screen.route } == true) Color.White else Color.LightGray)
+                },
+                label = {
+                    Text(
+                        screen.label,
+                        color = if (currentDestination?.hierarchy?.any { it.route == screen.route } == true) Color.White else Color.LightGray)
+                },
                 selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                 onClick = {
                     navController.navigate(screen.route) {
@@ -181,7 +226,11 @@ fun AppBottomBar(navController: NavController, currentDestination: androidx.navi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppNavigation(navController: androidx.navigation.NavHostController, modifier: Modifier = Modifier) {
+fun AppNavigation(
+    navController: androidx.navigation.NavHostController,
+    modifier: Modifier = Modifier,
+    navigateToHomeFromPrepare: () -> Unit
+) {
     NavHost(
         navController = navController,
         startDestination = AppScreen.Login.route, // O tu lógica para determinar la pantalla inicial
@@ -220,7 +269,10 @@ fun AppNavigation(navController: androidx.navigation.NavHostController, modifier
         }
 
         composable(AppScreen.Prepare.route) { // Usar AppScreen.Prepare.route
-            PrepareScreen(/*...*/)
+            PrepareScreen(
+                // viewModel se inyecta automáticamente por Hilt
+                onNavigateToHome = navigateToHomeFromPrepare // Usa la lambda pasada
+            )
         }
 
         composable(AppScreen.Settings.route) { // Usar AppScreen.Settings.route

@@ -139,17 +139,23 @@ dependencies {
 //    implementation(libs.journeyapps.zxing.android.embedded)
 
     // --- CameraX core y camera2 ---
+    implementation(libs.guava)
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
-    // Para análisis de códigos QR
+    // --- Para análisis de códigos QR ---
     implementation(libs.barcode.scanning)
 
-    // Coil para carga de imágenes
+    // --- Coil para carga de imágenes ---
     implementation(libs.coil.compose)
 
+    // --- Permissions with Accompanist  ---
     implementation(libs.accompanist.permissions) // Verifica la última versión
+
+    // --- Cloudinary ---
+    implementation(libs.cloudinary.android) // Revisa la última versión
+    implementation(libs.cloudinary.core)
 
     // --- Pruebas Unitarias ---
     testImplementation(libs.junit)
