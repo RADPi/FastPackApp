@@ -11,9 +11,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
-import androidx.navigation.NavHostController
-import com.fastpack.navigation.AppScreen
 import com.fastpack.ui.prepare.composables.CameraPreviewView
 import com.fastpack.ui.prepare.composables.ShipmentDetailsView // Asumo que este composable existe
 import com.google.accompanist.permissions.*
@@ -125,7 +122,7 @@ fun PrepareScreen(
                     )
                     CameraPreviewView(
                         modifier = Modifier.fillMaxSize(),
-                        onQrCodeScanned = { qrCode ->
+                        onBarcodeScanned = { qrCode ->
                             viewModel.onQrCodeScanned(qrCode)
                         }
                     )

@@ -1,9 +1,11 @@
 package com.fastpack.ui.prepare.composables
 
 // import androidx.camera.core.ExperimentalGetImage // Comentado si no se usa directamente ImageProxy.image
+import android.annotation.SuppressLint
 import android.util.Log
 import android.view.ViewGroup
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.CameraUnavailableException
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
@@ -13,202 +15,159 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.guava.await
+import kotlinx.coroutines.launch
 
 @Composable
 fun CameraPreviewView(
     modifier: Modifier = Modifier,
-    onQrCodeScanned: (String) -> Unit
+    onBarcodeScanned: (String) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    // PreviewView debe ser recordada para que sobreviva a las recomposiciones sin recrearse
     val previewView = remember {
         PreviewView(context).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            scaleType = PreviewView.ScaleType.FILL_CENTER // O la que prefieras
-            // Implementations mode es importante para el rendimiento y la correcta visualización
-            // COMPATIBLE usa SurfaceView, PERFORMANCE usa TextureView.
-            // PERFORMANCE suele ser mejor si no necesitas características específicas de SurfaceView.
+            scaleType = PreviewView.ScaleType.FILL_CENTER
             implementationMode = PreviewView.ImplementationMode.PERFORMANCE
         }
     }
 
-    // El cameraProviderFuture se puede obtener dentro del LaunchedEffect para simplificar.
-    // No necesitamos un estado mutable para cameraProvider si solo se usa dentro del LaunchedEffect y DisposableEffect.
-
-    // LaunchedEffect para configurar la cámara.
-    // Se ejecutará cuando lifecycleOwner cambie (lo cual es bueno, se adapta al ciclo de vida).
-    // Usar 'Unit' como clave si solo necesitas que se ejecute una vez y se limpie al salir.
-    // Sin embargo, depender de lifecycleOwner es correcto para la configuración de la cámara.
-    LaunchedEffect(lifecycleOwner) {
-        Log.d("CameraPreviewView", "LaunchedEffect: Setting up camera for lifecycleOwner: $lifecycleOwner")
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
-        val cameraProvider = cameraProviderFuture.get() // Bloqueante, pero seguro en LaunchedEffect
-
-        // Desvincular todo antes de empezar para evitar conflictos
-        // Esto es útil si el composable se recompone y este LaunchedEffect se relanza.
-        // Aunque bindToLifecycle debería manejar esto, una limpieza explícita puede ser más segura.
-        try {
-            cameraProvider.unbindAll() // Desvincula cualquier uso anterior de la cámara.
-            Log.d("CameraPreviewView", "CameraProvider unbindAll() called before binding.")
-        } catch (e: Exception) {
-            Log.e("CameraPreviewView", "Error on unbindAll before binding: ${e.message}", e)
-            // Considera cómo manejar este error. Podría significar que la cámara no estaba bien inicializada.
-        }
-
-
-        val preview = Preview.Builder()
-            .build()
-            .also {
-                it.setSurfaceProvider(previewView.surfaceProvider)
-            }
-
-        val imageAnalyzer = ImageAnalysis.Builder()
-            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .build()
-            .also {
-                it.setAnalyzer(
-                    Executors.newSingleThreadExecutor(), // Considera un Executor compartido/inyectado si es usado en múltiples lugares
-                    QrCodeAnalyzer { qrCode ->
-                        onQrCodeScanned(qrCode)
-                    }
-                )
-            }
-
-        val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-        try {
-            // Vincula los casos de uso al ciclo de vida del composable.
-            // CameraX maneja automáticamente la activación/desactivación de la cámara
-            // basado en el estado del lifecycleOwner.
-            cameraProvider.bindToLifecycle(
-                lifecycleOwner,
-                cameraSelector,
-                preview,
-                imageAnalyzer
+    val barcodeScanner = remember {
+        Log.d("CameraPreviewView", "Creating BarcodeScanner instance")
+        val options = BarcodeScannerOptions.Builder()
+            .setBarcodeFormats(
+                Barcode.FORMAT_QR_CODE,
+                Barcode.FORMAT_CODE_128,
+                Barcode.FORMAT_CODE_39,
+                Barcode.FORMAT_EAN_13,
+                Barcode.FORMAT_UPC_A,
+                Barcode.FORMAT_DATA_MATRIX
             )
-            Log.d("CameraPreviewView", "Camera bound to lifecycle. LifecycleOwner: $lifecycleOwner")
-        } catch (exc: Exception) {
-            Log.e("CameraPreviewView", "Failed to bind camera use cases", exc)
-        }
-
-        // No necesitas un onDispose aquí dentro de LaunchedEffect para desvincular,
-        // ya que bindToLifecycle ya asocia la cámara al ciclo de vida del lifecycleOwner.
-        // CameraX desvinculará automáticamente cuando el lifecycleOwner sea destruido (ej. al navegar fuera de la pantalla).
-        // Sin embargo, si quieres una limpieza más explícita o si unbindAll() al principio no es suficiente
-        // en todos los escenarios de recomposición, un DisposableEffect separado podría ser considerado,
-        // pero idealmente bindToLifecycle es suficiente.
-
-        // Si tuvieras un DisposableEffect, sería así, pero ten cuidado con la clave.
-        // Si la clave es solo `cameraProvider`, se desvinculará si `cameraProvider` cambia,
-        // lo cual no debería suceder si lo obtienes una vez. Si la clave es `lifecycleOwner`,
-        // se desvinculará cuando el `lifecycleOwner` cambie o sea destruido, lo cual es lo que `bindToLifecycle` ya hace.
-        // Por lo tanto, un DisposableEffect explícito para desvincular aquí puede ser redundante y causar problemas
-        // si no se maneja correctamente (como la desvinculación prematura que observaste).
-
-        // -> La clave de tu problema original estaba probablemente en un DisposableEffect
-        // -> con una clave que cambiaba innecesariamente, o que el mismo `cameraProvider`
-        // -> estaba cambiando de instancia, provocando la ejecución del `onDispose`.
-
-        // Vamos a confiar en que bindToLifecycle maneje la desvinculación cuando el lifecycleOwner
-        // se destruya.
+            .build()
+        BarcodeScanning.getClient(options)
     }
 
-    Box(modifier = modifier) {
-        AndroidView(
-            factory = { previewView }, // Simplemente devuelve la PreviewView recordada
-            modifier = Modifier.fillMaxSize(),
-            // El bloque update no es estrictamente necesario si la configuración inicial
-            // de la previewView (como layoutParams, scaleType) se hace al crearla
-            // y el surfaceProvider se establece en el LaunchedEffect.
-            // update = { view ->
-            //    Log.d("CameraPreviewView", "AndroidView update block. PreviewView: $view")
-            //    // Aquí podrías reaccionar a cambios si `previewView` necesitara
-            //    // reconfigurarse dinámicamente, pero es menos común para este caso.
-            // }
+    val qrCodeAnalyzer = remember(barcodeScanner) {
+        QrCodeAnalyzer(
+            onBarcodeScanned = onBarcodeScanned,
+            scanner = barcodeScanner
         )
     }
 
-    // Si decides que NECESITAS un DisposableEffect para desvincular explícitamente,
-    // asegúrate de que sus claves sean correctas.
-    // Usar `lifecycleOwner` como clave aquí significa que `onDispose` se llamará
-    // cuando este `CameraPreviewView` deje la composición O cuando `lifecycleOwner` cambie
-    // a una nueva instancia (lo que implicaría una nueva configuración de todos modos).
-    // La clave `Unit` haría que `onDispose` se llame solo cuando `CameraPreviewView` deje la composición.
-    // **Importante**: `bindToLifecycle` ya hace la limpieza cuando el `lifecycleOwner` se destruye.
-    // Añadir un `DisposableEffect` adicional para `unbindAll()` podría ser redundante o
-    // incluso causar problemas si las condiciones no son las correctas.
-    //
-    // El problema que tenías (desvinculación inmediata) podría haber sido porque:
-    // 1. El `lifecycleOwner` estaba cambiando inmediatamente después de la configuración.
-    // 2. La instancia de `cameraProvider` en el `DisposableEffect` cambiaba o era null inicialmente y luego no null,
-    //    disparando el `onDispose` del efecto anterior.
-    //
-    // Si confías en `bindToLifecycle`, este `DisposableEffect` podría no ser necesario.
-    // Si lo mantienes, asegúrate de que `cameraProviderFuture.get()` se llame una sola vez
-    // y que la instancia de `cameraProvider` sea estable.
-    //
-    // **Por ahora, lo comentaré para basarnos en el comportamiento de `bindToLifecycle`.**
-    // **Si sigues viendo problemas de recursos no liberados, podríamos reevaluarlo.**
+    // Ya no necesitamos 'var cameraProvider: ProcessCameraProvider? by remember { mutableStateOf(null) }'
 
-    DisposableEffect(lifecycleOwner) { // O `Unit` si solo quieres limpieza al salir del composable
-        onDispose {
-            Log.d("CameraPreviewView", "DisposableEffect: onDispose. Attempting to unbind all. LifecycleOwner: $lifecycleOwner")
-            // Es crucial obtener el cameraProvider de una manera que no cause
-            // que este onDispose se llame prematuramente.
-            // Si cameraProvider se obtiene de forma asíncrona y es null inicialmente,
-            // este bloque podría ejecutarse cuando `lifecycleOwner` aún está activo.
-            val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+    // LaunchedEffect para configurar la cámara y DisposableEffect para limpiar,
+    // ambos vinculados a lifecycleOwner y barcodeScanner.
+    // El cameraProvider se obtendrá y usará dentro del mismo efecto.
+    DisposableEffect(lifecycleOwner, barcodeScanner) {
+        Log.d("CameraPreviewView", "DisposableEffect setup/re-evaluation for camera.")
+        val cameraExecutor = Executors.newSingleThreadExecutor()
+        var boundCameraProvider: ProcessCameraProvider? = null // Para mantener referencia al provider usado
+
+        val job = CoroutineScope(Dispatchers.Main + SupervisorJob()).launch {
+            // ... tu código de configuración de la cámara aquí dentro ...
             try {
-                // No es ideal hacer .get() en onDispose si puede bloquear,
-                // pero si el provider ya fue obtenido, debería ser rápido.
-                // Sin embargo, si el LaunchedEffect ya tiene el provider, podrías pasarlo
-                // o recuperarlo de una manera más segura.
-                // El problema es que cameraProvider (como estado mutable) podría haber cambiado.
-                val provider = cameraProviderFuture.get() // Riesgo si aún no está listo o si el contexto ya no es válido
-                provider.unbindAll()
-                Log.d("CameraPreviewView", "Camera unbinding explicitly in DisposableEffect onDispose")
+                val obtainedCameraProvider = ProcessCameraProvider.getInstance(context).await()
+                boundCameraProvider = obtainedCameraProvider // Guardar para la limpieza
+
+                val preview = Preview.Builder().build().also {
+                    it.setSurfaceProvider(previewView.surfaceProvider)
+                }
+
+                val imageAnalyzer = ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build()
+                    .also {
+                        it.setAnalyzer(cameraExecutor, qrCodeAnalyzer)
+                    }
+
+                val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+                obtainedCameraProvider.unbindAll() // Buena práctica
+                Log.d("CameraPreviewView", "Unbinding all before binding.")
+
+                obtainedCameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    cameraSelector,
+                    preview,
+                    imageAnalyzer
+                )
+                Log.d("CameraPreviewView", "Camera bound to lifecycle. Analyzer configured.")
+
             } catch (e: Exception) {
-                Log.e("CameraPreviewView", "Error unbinding camera in DisposableEffect: ${e.message}", e)
+                Log.e("CameraPreviewView", "Error setting up camera: ${e.message}", e)
+                if (e is CameraUnavailableException) {
+                    Log.e("CameraPreviewView", "Camera is unavailable: ${e.message}", e)
+                } else if (e is IllegalStateException && e.message?.contains("CameraSelector references unresolved camera") == true) {
+                    Log.e("CameraPreviewView", "No camera available for CameraSelector.DEFAULT_BACK_CAMERA: ${e.message}", e)
+                }
             }
+        }
+
+        onDispose {
+            Log.d("CameraPreviewView", "DisposableEffect: onDispose. boundCameraProvider: $boundCameraProvider")
+            job.cancel() // Cancelar la corutina si aún está activa
+            boundCameraProvider?.unbindAll()
+            // barcodeScanner.close() // Se puede cerrar aquí o si el scanner se gestiona fuera, fuera.
+            // Ya que está en el remember del Composable, se cerrará cuando el composable se vaya.
+            // Pero cerrarlo aquí es más seguro si el ciclo de vida del composable es complejo.
+            cameraExecutor.shutdown() // ¡Importante liberar el executor!
+            Log.d("CameraPreviewView", "Camera unbound, executor shutdown. BarcodeScanner might be closed by its remember scope.")
+        }
+    }
+    // Mueve el cierre de barcodeScanner a un DisposableEffect separado si quieres ser explícito
+    // o si el `remember` de barcodeScanner tiene una vida más larga que este DisposableEffect.
+    // Por ahora, el remember { barcodeScanner.close() } debería ser suficiente cuando el Composable se va.
+    // Para mayor seguridad, puedes hacer esto:
+    DisposableEffect(barcodeScanner) {
+        onDispose {
+            Log.d("CameraPreviewView", "Closing BarcodeScanner in its own DisposableEffect.")
+            barcodeScanner.close()
         }
     }
 
+
+    Box(modifier = modifier) {
+        AndroidView(
+            factory = {
+                Log.d("CameraPreviewView", "AndroidView factory for PreviewView.")
+                previewView
+            },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
 }
 
 class QrCodeAnalyzer(
-    private val onQrCodeScanned: (String) -> Unit
+    private val onBarcodeScanned: (String) -> Unit,
+    private val scanner: BarcodeScanner
 ) : ImageAnalysis.Analyzer {
 
-    // @ExperimentalGetImage // Anotación a nivel de clase o uso específico si accedes a imageProxy.image
-    // Aunque no está en tu código original, si usas imageProxy.image debes tenerla.
-    // La plantilla no la pone automáticamente en el constructor.
-
-    private val barcodeScanner = BarcodeScanning.getClient(
-        BarcodeScannerOptions.Builder()
-            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-            .build()
-    )
     private var isProcessing = AtomicBoolean(false)
+    private var hasScanned = AtomicBoolean(false)
 
-    @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class) // Necesario para imageProxy.image
+    @SuppressLint("UnsafeOptInUsageError")
     override fun analyze(imageProxy: ImageProxy) {
-        if (!isProcessing.compareAndSet(false, true)) {
+        if (isProcessing.getAndSet(true) || hasScanned.get()) {
             imageProxy.close()
             return
         }
@@ -216,28 +175,61 @@ class QrCodeAnalyzer(
         val mediaImage = imageProxy.image
         if (mediaImage != null) {
             val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-            barcodeScanner.process(image)
+
+            scanner.process(image)
                 .addOnSuccessListener { barcodes ->
-                    barcodes.firstOrNull()?.rawValue?.let { qrCode ->
-                        Log.d("QrCodeAnalyzer", "Código QR detectado: $qrCode")
-                        // Asegúrate de que este callback no tarde mucho o cause problemas de UI.
-                        // Si necesitas cambiar de hilo, hazlo dentro del callback.
-                        onQrCodeScanned(qrCode)
+                    if (barcodes.isNotEmpty()) {
+                        for (barcode in barcodes) {
+                            val rawValue = barcode.rawValue
+                            // Validación: 11 caracteres y todos numéricos
+                            if (rawValue != null && rawValue.length == 11 && rawValue.all { it.isDigit() }) {
+                                if (!hasScanned.getAndSet(true)) {
+                                    Log.d("QrCodeAnalyzer", "Valid barcode found: $rawValue")
+                                    onBarcodeScanned(rawValue) // Llama al callback
+                                    // No necesitas romper el bucle aquí si hasScanned ya está en true,
+                                    // el siguiente barcode válido no pasará el if(!hasScanned.getAndSet(true))
+                                }
+                                // Si quieres procesar solo el PRIMER código válido y luego detener el análisis
+                                // hasta un reset, puedes mantener el break o simplemente confiar en hasScanned.
+                                // break // Opcional: si solo te interesa el primero que cumpla
+                            } else {
+                                Log.d("QrCodeAnalyzer", "Ignored barcode (format/type mismatch): ${barcode.rawValue}, Format: ${barcode.format}, Type: ${barcode.valueType}")
+                            }
+                        }
                     }
                 }
-                .addOnFailureListener { e ->
-                    Log.e("QrCodeAnalyzer", "Fallo el escaneo de código de barras", e)
+                .addOnFailureListener {
+                    Log.e("QrCodeAnalyzer", "Barcode scanning failed", it)
                 }
                 .addOnCompleteListener {
-                    // Cierra la imagen SIEMPRE después del procesamiento.
-                    // Esto es crucial para que CameraX pueda entregar el siguiente frame.
                     imageProxy.close()
-                    isProcessing.set(false) // Permite el siguiente frame
+                    isProcessing.set(false)
+                    // hasScanned se resetea externamente si se quiere permitir un nuevo escaneo
                 }
         } else {
-            // Si mediaImage es null, aún debemos cerrar imageProxy y resetear isProcessing.
             imageProxy.close()
             isProcessing.set(false)
+        }
+    }
+
+    // Método para permitir un nuevo escaneo si es necesario
+    fun reset() {
+        hasScanned.set(false)
+        isProcessing.set(false) // También resetea isProcessing por si acaso
+        Log.d("QrCodeAnalyzer", "Analyzer reset for new scan.")
+    }
+}
+
+@Composable
+private fun rememberPreviewView(context: android.content.Context): PreviewView {
+    return remember {
+        PreviewView(context).apply {
+            layoutParams = android.view.ViewGroup.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            scaleType = PreviewView.ScaleType.FILL_CENTER
+            implementationMode = PreviewView.ImplementationMode.PERFORMANCE
         }
     }
 }

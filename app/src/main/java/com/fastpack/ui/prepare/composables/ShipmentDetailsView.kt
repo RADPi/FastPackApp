@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items // Para items en LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -84,7 +85,8 @@ fun ShipmentDetailsView(
     viewModel: PrepareViewModel
 ) {
     val context = LocalContext.current
-    var tempUriForCamera: Uri? = null // Para almacenar la URI antes de que la cámara la llene
+    var tempUriForCamera: Uri? =
+        null // Para almacenar la URI antes de que la cámara la llene
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
@@ -159,7 +161,10 @@ fun ShipmentDetailsView(
 
             if (photoUri != null) {
                 // Mostrar preview de la foto y botones de confirmación/rehacer
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(photoUri)
@@ -179,34 +184,45 @@ fun ShipmentDetailsView(
                     ) {
                         Button(
                             onClick = onConfirmPhotoClick,
+                            modifier = Modifier.fillMaxWidth(),
                             enabled = !isUploading
                         ) {
-                            Icon(Icons.Filled.Check, contentDescription = "Confirmar")
+                            Icon(Icons.Filled.Check, contentDescription = "Guardar")
                             Spacer(Modifier.width(4.dp))
-                            Text("Confirmar y Guardar")
+                            Text("Guardar")
                         }
-                        OutlinedButton(
-                            onClick = onRetakePhotoClick,
-                            enabled = !isUploading
+                        Spacer(Modifier.height(12.dp))
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Icon(painter = painterResource(R.drawable.baseline_redo_24),"Rehacer")
-                            Spacer(Modifier.width(4.dp))
-                            Text("Rehacer")
+                            OutlinedButton(
+                                onClick = onRetakePhotoClick,
+                                enabled = !isUploading
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.baseline_redo_24),
+                                    "Rehacer"
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text("Rehacer")
+                            }
+                            if (isUploading) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                CircularProgressIndicator()
+                            }
+                            OutlinedButton(
+                                onClick = onCancelPhotoClick,
+                                enabled = !isUploading,
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.outline_no_photography_24),
+                                    contentDescription = "Cancelar"
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text("Cancelar")
+                            }
                         }
-                    if (isUploading) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        CircularProgressIndicator()
-                    }
-                    OutlinedButton(
-                        onClick = onCancelPhotoClick,
-                        enabled = !isUploading,
-                        modifier = Modifier.padding(top = 8.dp)
-                    ) {
-                        Icon(painter = painterResource(id = R.drawable.outline_no_photography_24),
-                            contentDescription = "Cancelar")
-                        Spacer(Modifier.width(4.dp))
-                        Text("Cancelar Foto")
-                    }
                     }
                 }
             } else {
@@ -221,8 +237,10 @@ fun ShipmentDetailsView(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isUploading
                     ) {
-                        Icon(painter = painterResource(id = R.drawable.baseline_camera_alt_24),
-                            contentDescription = "Cancelar")
+                        Icon(
+                            painter = painterResource(id = R.drawable.baseline_camera_alt_24),
+                            contentDescription = "Cancelar"
+                        )
                         Spacer(Modifier.width(8.dp))
                         Text("Tomar Foto del Paquete")
                     }
@@ -230,7 +248,10 @@ fun ShipmentDetailsView(
             }
             if (isUploading) {
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Subiendo y guardando foto...", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    "Subiendo y guardando foto...",
+                    style = MaterialTheme.typography.bodyMedium
+                )
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
         }
@@ -332,8 +353,12 @@ fun ShippingItemCard(item: ShippingItem) {
                     Text(
                         text = "Cantidad: ${item.quantity ?: "N/D"}",
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = if ((item.quantity ?: 0) > 1) FontWeight.Bold else FontWeight.Normal,
-                        color = if ((item.quantity ?: 0) > 1) MaterialTheme.colorScheme.primary else Color.Unspecified
+                        fontWeight = if ((item.quantity
+                                ?: 0) > 1
+                        ) FontWeight.Bold else FontWeight.Normal,
+                        color = if ((item.quantity
+                                ?: 0) > 1
+                        ) MaterialTheme.colorScheme.primary else Color.Unspecified
                     )
                 }
             }
