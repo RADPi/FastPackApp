@@ -150,9 +150,13 @@ class PrepareViewModel @Inject constructor(
     }
 
     fun updateTempPhotoUri(uri: Uri?) {
+        Log.d("PrepareViewModel", "updateTempPhotoUri called with URI: $uri. Current state: ${_uiState.value}")
         val currentState = _uiState.value
         if (currentState is PrepareScreenState.ShowResult) {
             _uiState.value = currentState.copy(photoUri = uri, uploadSuccess = null, isUploading = false) // Resetea uploadSuccess y isUploading
+            Log.d("PrepareViewModel", "ShowResult state updated with photoUri: $uri")
+        } else {
+            Log.w("PrepareViewModel", "updateTempPhotoUri called but state is not ShowResult. URI: $uri, State: $currentState")
         }
     }
 
@@ -168,6 +172,7 @@ class PrepareViewModel @Inject constructor(
         shipment: ShipmentResponse,
         photoUri: Uri
     ) {
+        Log.d("PrepareViewModel", "uploadPhotoAndUpdateShipment called. Photo URI: $photoUri. Current state: ${_uiState.value}")
         val currentState = _uiState.value
         if (currentState is PrepareScreenState.ShowResult) {
             _uiState.value = currentState.copy(isUploading = true, uploadSuccess = null)

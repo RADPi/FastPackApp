@@ -156,6 +156,7 @@ fun PrepareScreen(
                                 viewModel.updateTempPhotoUri(uri)
                             },
                             onConfirmPhotoClick = {
+                                Log.d("PrepareScreen", "onConfirmPhotoClick triggered. Current photoUri in ShowResult state: ${(uiState as? PrepareScreenState.ShowResult)?.photoUri}")
                                 state.photoUri?.let { uri -> // Solo confirma si hay una URI
                                     viewModel.uploadPhotoAndUpdateShipment(
                                         context = context,

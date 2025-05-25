@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,12 +86,12 @@ fun ShipmentDetailsView(
     viewModel: PrepareViewModel
 ) {
     val context = LocalContext.current
-    var tempUriForCamera: Uri? =
-        null // Para almacenar la URI antes de que la cámara la llene
+    var tempUriForCamera by rememberSaveable { mutableStateOf<Uri?>(null) }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { success ->
+            Log.d("ShipmentDetailsView", "Camera Result: success=$success, tempUriForCamera=$tempUriForCamera, Current Orientation: ${context.resources.configuration.orientation}")
             if (success) {
                 tempUriForCamera?.let { uri ->
                     Log.d("ShipmentDetailsView", "Foto tomada con éxito: $uri")
@@ -232,6 +233,7 @@ fun ShipmentDetailsView(
                         onClick = {
                             val newUri = context.createImageUri()
                             tempUriForCamera = newUri
+                            Log.d("ShipmentDetailsView", "Launching camera with URI: $newUri, Current Orientation: ${context.resources.configuration.orientation}")
                             cameraLauncher.launch(newUri)
                         },
                         modifier = Modifier.fillMaxWidth(),
