@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.fastpack.services.BarcodeAnalyzer
+import com.fastpack.ui.prepare.PrepareViewModel
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -37,8 +39,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun CameraPreviewView(
     modifier: Modifier = Modifier,
-    onBarcodeScanned: (String) -> Unit,
-    onAnalyzerReady: ((() -> Unit) -> Unit)? = null
+    barcodeAnalyzer: BarcodeAnalyzer,
+    onAnalyzerReady: ((resetAction: () -> Unit) -> Unit)? = null,
+    viewModel: PrepareViewModel
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -53,34 +56,13 @@ fun CameraPreviewView(
         }
     }
 
-    val barcodeScanner = remember {
-        Log.d("CameraPreviewView", "Creating BarcodeScanner instance")
-        val options = BarcodeScannerOptions.Builder()
-            .setBarcodeFormats(
-                Barcode.FORMAT_QR_CODE,
-                Barcode.FORMAT_CODE_128,
-            )
-            .build()
-        BarcodeScanning.getClient(options)
+    LaunchedEffect(barcodeAnalyzer, viewModel) {
+        onAnalyzerReady?.invoke {
+            barcodeAnalyzer.reset()
+        }
     }
 
-    val qrCodeAnalyzer = remember(barcodeScanner) {
-        QrCodeAnalyzer(
-            onBarcodeScanned = onBarcodeScanned,
-            scanner = barcodeScanner
-        )
-    }
-
-    LaunchedEffect(qrCodeAnalyzer) {
-        onAnalyzerReady?.invoke { qrCodeAnalyzer.reset() }
-    }
-
-    // Ya no necesitamos 'var cameraProvider: ProcessCameraProvider? by remember { mutableStateOf(null) }'
-
-    // LaunchedEffect para configurar la cámara y DisposableEffect para limpiar,
-    // ambos vinculados a lifecycleOwner y barcodeScanner.
-    // El cameraProvider se obtendrá y usará dentro del mismo efecto.
-    DisposableEffect(lifecycleOwner, barcodeScanner) {
+    DisposableEffect(lifecycleOwner, barcodeAnalyzer) {
         Log.d("CameraPreviewView", "DisposableEffect setup/re-evaluation for camera.")
         val cameraExecutor = Executors.newSingleThreadExecutor()
         var boundCameraProvider: ProcessCameraProvider? = null // Para mantener referencia al provider usado
@@ -95,11 +77,17 @@ fun CameraPreviewView(
                     it.setSurfaceProvider(previewView.surfaceProvider)
                 }
 
-                val imageAnalyzer = ImageAnalysis.Builder()
+
+                val imageAnalyzerUseCase = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                     .also {
-                        it.setAnalyzer(cameraExecutor, qrCodeAnalyzer)
+                        if (barcodeAnalyzer is ImageAnalysis.Analyzer) {
+                            it.setAnalyzer(cameraExecutor, barcodeAnalyzer)
+                        } else {
+                            Log.e("CameraPreviewView", "Provided barcodeAnalyzer does not implement ImageAnalysis.Analyzer")
+                            // Podrías lanzar una excepción o manejarlo de otra forma
+                        }
                     }
 
                 val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
@@ -111,7 +99,7 @@ fun CameraPreviewView(
                     lifecycleOwner,
                     cameraSelector,
                     preview,
-                    imageAnalyzer
+                    imageAnalyzerUseCase
                 )
                 Log.d("CameraPreviewView", "Camera bound to lifecycle. Analyzer configured.")
 
@@ -140,10 +128,9 @@ fun CameraPreviewView(
     // o si el `remember` de barcodeScanner tiene una vida más larga que este DisposableEffect.
     // Por ahora, el remember { barcodeScanner.close() } debería ser suficiente cuando el Composable se va.
     // Para mayor seguridad, puedes hacer esto:
-    DisposableEffect(barcodeScanner) {
+    DisposableEffect(barcodeAnalyzer) {
         onDispose {
-            Log.d("CameraPreviewView", "Closing BarcodeScanner in its own DisposableEffect.")
-            barcodeScanner.close()
+            barcodeAnalyzer.release() // Llama a scanner.close()
         }
     }
 
@@ -159,102 +146,3 @@ fun CameraPreviewView(
     }
 }
 
-class QrCodeAnalyzer(
-    private val onBarcodeScanned: (String) -> Unit,
-    private val scanner: BarcodeScanner
-) : ImageAnalysis.Analyzer {
-
-    private var isProcessing = AtomicBoolean(false)
-    private var hasScanned = AtomicBoolean(false)
-
-    @SuppressLint("UnsafeOptInUsageError")
-    override fun analyze(imageProxy: ImageProxy) {
-        if (isProcessing.getAndSet(true) || hasScanned.get()) {
-            imageProxy.close()
-            return
-        }
-
-        val mediaImage = imageProxy.image
-        if (mediaImage != null) {
-            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-
-            scanner.process(image)
-                .addOnSuccessListener { barcodes ->
-                    if (barcodes.isNotEmpty()) {
-                        for (barcode in barcodes) {
-                            val rawValue = barcode.rawValue
-                            // NUEVO: Obtener y registrar el formato del código de barras
-                            val barcodeFormat = barcode.format
-                            val formatString = getBarcodeFormatString(barcodeFormat) // Función helper
-
-                            Log.d("QrCodeAnalyzer", "Barcode detected. Value: $rawValue, Format ID: $barcodeFormat, Format Name: $formatString, Type: ${barcode.valueType}")
-
-                            // Validación existente: 11 caracteres y todos numéricos
-                            if (rawValue != null && rawValue.length == 11 && rawValue.all { it.isDigit() }) {
-                                if (!hasScanned.getAndSet(true)) {
-                                    Log.i("QrCodeAnalyzer", "VALID barcode found. Value: $rawValue, Format: $formatString. Processing...")
-                                    onBarcodeScanned(rawValue) // Llama al callback
-                                }
-                            } else {
-                                Log.d("QrCodeAnalyzer", "Ignored barcode (failed validation or already processed). Value: $rawValue, Format: $formatString")
-                            }
-                        }
-                    } else {
-                        // Log.v("QrCodeAnalyzer", "No barcodes found in this frame.") // Opcional: para mucho detalle
-                    }
-                }
-                .addOnFailureListener {
-                    Log.e("QrCodeAnalyzer", "Barcode scanning failed", it)
-                }
-                .addOnCompleteListener {
-                    imageProxy.close()
-                    isProcessing.set(false)
-                }
-        } else {
-            imageProxy.close()
-            isProcessing.set(false)
-        }
-    }
-
-    // Método para permitir un nuevo escaneo si es necesario
-    fun reset() {
-        hasScanned.set(false)
-        isProcessing.set(false)
-        Log.d("QrCodeAnalyzer", "Analyzer reset for new scan.")
-    }
-
-    // NUEVO: Función helper para convertir el ID del formato a un nombre legible
-    private fun getBarcodeFormatString(format: Int): String {
-        return when (format) {
-            Barcode.FORMAT_UNKNOWN -> "UNKNOWN"
-            Barcode.FORMAT_ALL_FORMATS -> "ALL_FORMATS"
-            Barcode.FORMAT_CODE_128 -> "CODE_128"
-            Barcode.FORMAT_CODE_39 -> "CODE_39"
-            Barcode.FORMAT_CODE_93 -> "CODE_93"
-            Barcode.FORMAT_CODABAR -> "CODABAR"
-            Barcode.FORMAT_DATA_MATRIX -> "DATA_MATRIX"
-            Barcode.FORMAT_EAN_13 -> "EAN_13"
-            Barcode.FORMAT_EAN_8 -> "EAN_8"
-            Barcode.FORMAT_ITF -> "ITF"
-            Barcode.FORMAT_QR_CODE -> "QR_CODE"
-            Barcode.FORMAT_UPC_A -> "UPC_A"
-            Barcode.FORMAT_UPC_E -> "UPC_E"
-            Barcode.FORMAT_AZTEC -> "AZTEC"
-            else -> "OTHER (${format})"
-        }
-    }
-}
-
-@Composable
-private fun rememberPreviewView(context: android.content.Context): PreviewView {
-    return remember {
-        PreviewView(context).apply {
-            layoutParams = android.view.ViewGroup.LayoutParams(
-                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                android.view.ViewGroup.LayoutParams.MATCH_PARENT
-            )
-            scaleType = PreviewView.ScaleType.FILL_CENTER
-            implementationMode = PreviewView.ImplementationMode.PERFORMANCE
-        }
-    }
-}

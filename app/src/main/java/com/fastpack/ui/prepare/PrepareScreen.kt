@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.fastpack.services.MLKitBarcodeAnalyzer
 import com.fastpack.ui.prepare.composables.CameraPreviewView
 import com.fastpack.ui.prepare.composables.ShipmentDetailsView // Asumo que este composable existe
 import com.google.accompanist.permissions.*
@@ -28,8 +29,20 @@ fun PrepareScreen(
     // Manejo de permisos de cámara con Accompanist
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
 
-    // Efecto para reaccionar a los cambios en el estado del permiso
-    // y para la lógica inicial de comprobación de permisos.
+    val barcodeAnalyzer = remember(viewModel) {
+        MLKitBarcodeAnalyzer(
+            onBarcodeScanned = { qrCode ->
+                viewModel.onQrCodeScanned(qrCode)
+            }
+        )
+    }
+
+    DisposableEffect(barcodeAnalyzer) {
+        onDispose {
+            barcodeAnalyzer.release()
+        }
+    }
+
     LaunchedEffect(cameraPermissionState.status) {
         Log.d(
             "PrepareScreen",
@@ -122,10 +135,12 @@ fun PrepareScreen(
                     )
                     CameraPreviewView(
                         modifier = Modifier.fillMaxSize(),
-                        onBarcodeScanned = { qrCode ->
-                            viewModel.onQrCodeScanned(qrCode)
-                        },
-                        onAnalyzerReady = { resetAction -> viewModel.resetScannerAction = resetAction } // Nueva lambda
+                        barcodeAnalyzer = barcodeAnalyzer,
+                        viewModel = viewModel, // Si CameraPreviewView aún lo necesita para otras cosas
+                        onAnalyzerReady = { providedResetAction ->
+
+                            viewModel.assignExternalResetAction(providedResetAction)
+                        }
                     )
                     // Puedes superponer el título aquí si lo deseas, aunque ya está en el TopAppBar
                     // Text("Escanee la etiqueta del envío", modifier = Modifier.align(Alignment.TopCenter).padding(16.dp))

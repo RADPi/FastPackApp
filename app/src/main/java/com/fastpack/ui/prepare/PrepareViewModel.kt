@@ -14,6 +14,7 @@ import com.cloudinary.android.callback.UploadCallback
 import com.fastpack.data.model.ShipmentResponse
 import com.fastpack.data.model.ShippedItemsPhoto
 import com.fastpack.data.repository.ShipmentRepository // Asumo que existe
+import com.fastpack.ui.prepare.composables.createImageUri
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +34,8 @@ sealed class PrepareScreenState {
         val shipment: ShipmentResponse,
         val photoUri: Uri? = null,
         val isUploading: Boolean = false,
-        val uploadSuccess: Boolean? = null
+        val uploadSuccess: Boolean? = null,
+        val triggerCameraLaunch: Boolean? = null,
     ) : PrepareScreenState() // Modificado
 
     data class NoResult(val scannedCode: String) : PrepareScreenState()
@@ -51,18 +53,31 @@ class PrepareViewModel @Inject constructor(
     private val _navigateToHome = MutableSharedFlow<Unit>()
     val navigateToHome = _navigateToHome.asSharedFlow()
 
+    private val _relaunchCameraSignal = MutableSharedFlow<Uri>() // Emitirá la nueva URI para la cámara
+    val relaunchCameraSignal = _relaunchCameraSignal.asSharedFlow()
+
 
     // Para almacenar la URI temporal de la foto tomada
     var tempPhotoUri by mutableStateOf<Uri?>(null)
         private set
 
-    var resetScannerAction: (() -> Unit)? = null
+    var resetScannerAction: (() -> Unit)? = null // Propiedad pública, si la necesitas
+
+    private var externalResetScannerAction: (() -> Unit)? = null
+
+    fun assignExternalResetAction(action: () -> Unit) {
+        this.externalResetScannerAction = action
+        Log.d("PrepareViewModel", "externalResetScannerAction assigned")
+    }
 
     fun onReadyToScanAgain() {
         _uiState.value = PrepareScreenState.Scanning
-        resetScannerAction?.invoke()
+        // Decide cuál quieres llamar aquí, o si `externalResetScannerAction`
+        // es el único que debe usarse para el reinicio del analizador.
+        externalResetScannerAction?.invoke()
         Log.d("PrepareViewModel", "Retrying scan. Transitioning to Scanning and reset analyzer.")
     }
+
 
     fun onCameraPermissionResult(isGranted: Boolean) {
         Log.d(
@@ -161,9 +176,45 @@ class PrepareViewModel @Inject constructor(
     }
 
     fun clearTempPhoto() {
+        Log.d("PrepareViewModel", "clearTempPhoto called. Current state: ${_uiState.value}")
         val currentState = _uiState.value
         if (currentState is PrepareScreenState.ShowResult) {
+            _uiState.value = currentState.copy(
+                photoUri = null,
+                uploadSuccess = null,
+                isUploading = false,
+                triggerCameraLaunch = true
+            )
+            Log.d("PrepareViewModel", "Photo URI cleared for retake. New state: ${_uiState.value}")
+
+        } else {
+            Log.w("PrepareViewModel", "handleRetakePhoto called but state is not ShowResult. State: $currentState")
+        }
+    }
+
+    fun prepareForRetakeAndRelaunchCamera(context: Context) {
+        Log.d("PrepareViewModel", "prepareForRetakeAndRelaunchCamera. Current state: ${_uiState.value}")
+        val currentState = _uiState.value
+        if (currentState is PrepareScreenState.ShowResult) {
+            // 1. Limpiar la photoUri actual en el estado de la UI
             _uiState.value = currentState.copy(photoUri = null, uploadSuccess = null, isUploading = false)
+            Log.d("PrepareViewModel", "Photo URI cleared for retake. New state: ${_uiState.value}")
+
+            // 2. Crear una nueva URI y emitirla para que la UI la use para lanzar la cámara
+            val newUriForCamera = context.createImageUri() // Asegúrate que esta función es accesible o pasa el context
+            @Suppress("SENSELESS_COMPARISON")
+            if (newUriForCamera != null) {
+                viewModelScope.launch {
+                    Log.d("PrepareViewModel", "Emitting relaunchCameraSignal with URI: $newUriForCamera")
+                    _relaunchCameraSignal.emit(newUriForCamera)
+                }
+            } else {
+                Log.e("PrepareViewModel", "Failed to create new URI for camera relauch.")
+                // Podrías emitir un evento de error aquí si es necesario
+            }
+
+        } else {
+            Log.w("PrepareViewModel", "prepareForRetakeAndRelaunchCamera called but state is not ShowResult. State: $currentState")
         }
     }
 
@@ -287,9 +338,8 @@ class PrepareViewModel @Inject constructor(
                         )
                         _uiState.value = PrepareScreenState.ShowResult(
                             shipment = updatedShipmentFromServer,
-                            photoUri = null,
-                            isUploading = false,
-                            uploadSuccess = true
+                            uploadSuccess = true,
+                            triggerCameraLaunch = true
                         )
                         tempPhotoUri = null
                         _navigateToHome.emit(Unit)
@@ -358,7 +408,10 @@ class PrepareViewModel @Inject constructor(
                             "Successfully fetched shipment: ${shipmentResponseOrNull.id}"
                         ) // Ahora .id es accesible
                         _uiState.value =
-                            PrepareScreenState.ShowResult(shipmentResponseOrNull) // Pasa el ShipmentResponse no nulo
+                            PrepareScreenState.ShowResult(
+                                shipmentResponseOrNull,
+                                triggerCameraLaunch = true
+                            ) // Pasa el ShipmentResponse no nulo
                     } else {
                         // El Result fue exitoso, pero el valor dentro era null
                         // Esto podría significar "no encontrado" si tu API devuelve un success con cuerpo null para 404

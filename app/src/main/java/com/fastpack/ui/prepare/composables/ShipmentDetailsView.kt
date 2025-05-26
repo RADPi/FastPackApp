@@ -38,6 +38,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -91,6 +92,11 @@ fun ShipmentDetailsView(
     onCancelPhotoClick: () -> Unit,
     viewModel: PrepareViewModel,
 ) {
+    Log.d(
+        "ShipmentDetailsView",
+        "Recomposing. photoUri: $photoUri, shipment.shippedItemsPhoto: ${shipment.shippedItemsPhoto?.url}, isUploading: $isUploading"
+    )
+
     val context = LocalContext.current
     var tempUriForCamera by rememberSaveable { mutableStateOf<Uri?>(null) }
 
@@ -108,6 +114,14 @@ fun ShipmentDetailsView(
             }
         }
     )
+
+    LaunchedEffect(viewModel) { // O una clave más específica si es necesario
+        viewModel.relaunchCameraSignal.collect { newUri ->
+            Log.d("ShipmentDetailsView", "Received relaunchCameraSignal. Launching camera with URI: $newUri")
+            tempUriForCamera = newUri
+            cameraLauncher.launch(newUri)
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -203,7 +217,10 @@ fun ShipmentDetailsView(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             OutlinedButton(
-                                onClick = onRetakePhotoClick,
+                                onClick = {
+                                    Log.d("ShipmentDetailsView", "Rehacer clickeado. Llamando a viewModel.prepareForRetakeAndRelaunchCamera()")
+                                    viewModel.prepareForRetakeAndRelaunchCamera(context) // Pasa el contexto
+                                },
                                 enabled = !isUploading
                             ) {
                                 Icon(
@@ -232,13 +249,35 @@ fun ShipmentDetailsView(
                     }
                 }
             } else {
+                Log.d(
+                    "ShipmentDetailsView",
+                    "photoUri es null. Verificando si mostrar botón 'Tomar Foto'. shipment.shippedItemsPhoto?.url: ${shipment.shippedItemsPhoto?.url}"
+                )
                 // Botón para tomar la foto (solo si no hay una URL de foto existente en el shipment)
                 if (shipment.shippedItemsPhoto?.url.isNullOrEmpty()) {
                     Button(
                         onClick = {
+                            Log.d(
+                                "ShipmentDetailsView",
+                                "Botón 'Tomar Foto del Paquete' CLICKEADO"
+                            )
                             val newUri = context.createImageUri()
-                            tempUriForCamera = newUri
-                            cameraLauncher.launch(newUri)
+                            Log.d("ShipmentDetailsView", "Nueva URI creada: $newUri")
+                            @Suppress("SENSELESS_COMPARISON") // O la ID específica que te da el IDE para esta advertencia
+                            if (newUri != null) {
+                                tempUriForCamera = newUri
+                                cameraLauncher.launch(newUri)
+                                Log.d(
+                                    "ShipmentDetailsView",
+                                    "Lanzando cámara con URI: $newUri"
+                                )
+                            } else {
+                                Log.e(
+                                    "ShipmentDetailsView",
+                                    "Error: createImageUri() devolvió null."
+                                )
+                                // Toast.makeText(context, "No se pudo crear el archivo para la foto", Toast.LENGTH_LONG).show()
+                            }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isUploading
