@@ -149,7 +149,8 @@ data class ShippingItem(
     @SerialName("variation_id") val variationId: Long? = null, // Asumiendo Long por el ejemplo numérico
     @SerialName("variation_name") val variationName: String? = null,
     val picture: String? = null, // Ya se llama 'picture' en el JSON, no necesita @SerialName si el nombre de la propiedad es igual
-    @SerialName("seller_custom_field") val sellerCustomField: String? = null
+    @SerialName("seller_custom_field") val sellerCustomField: String? = null,
+    @SerialName("user_product_id") val userProductId: String? = null
 )
 
 @Serializable

@@ -2,11 +2,13 @@ package com.fastpack.ui.register
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -66,7 +68,8 @@ fun RegisterScreen( // <--- No se pasa NavController aquí directamente
                     onValueChange = { viewModel.onEvent(RegisterUiEvent.EmailChanged(it)) },
                     label = { Text("Email") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -76,7 +79,8 @@ fun RegisterScreen( // <--- No se pasa NavController aquí directamente
                     label = { Text("Contraseña") },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                 )
                 Spacer(modifier = Modifier.height(24.dp))
 

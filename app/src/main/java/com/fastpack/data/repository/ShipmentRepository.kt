@@ -1,5 +1,6 @@
 package com.fastpack.data.repository
 
+import android.annotation.SuppressLint
 import android.util.Log
 import com.fastpack.data.model.ShipmentResponse
 import com.fastpack.data.remote.ShipmentService
@@ -141,21 +142,38 @@ class ShipmentRepository @Inject constructor(
         for (shipment in shipments) {
             when (shipment.logisticType) {
                 "self_service" -> {
-                    if (shipment.substatus == "ready_to_print") {
-                        if (shipment.shippedItemsPhoto != null) {
-                            counts[FLEX_READY_TO_PREPARE] = counts[FLEX_READY_TO_PREPARE]!! + 1
-                        } else counts[FLEX_READY_TO_PRINT] = counts[FLEX_READY_TO_PRINT]!! + 1
-                    } else {
-                        counts[FLEX_PENDIENTES] = counts[FLEX_PENDIENTES]!! + 1
+                    when (shipment.substatus) {
+                        "ready_to_print" -> {
+                            counts[FLEX_READY_TO_PRINT] = counts[FLEX_READY_TO_PRINT]!! + 1
+                        }
+                        "printed" -> {
+                            if (shipment.shippedItemsPhoto == null) {
+                                counts[FLEX_READY_TO_PREPARE] = counts[FLEX_READY_TO_PREPARE]!! + 1
+                            } else {
+                                counts[FLEX_PENDIENTES] = counts[FLEX_PENDIENTES]!! + 1
+                            }
+                        }
+                        else -> {
+                             Log.d("ShipmentAnalysis", "Flex shipment ${shipment.id} is not categorized further here.")
+                        }
                     }
                 }
-                else -> { // Asumiendo que cualquier otra cosa es "despacho" excepto Fullfilment que ni llegan
-                    if (shipment.substatus == "ready_to_print") {
-                        if (shipment.shippedItemsPhoto != null) {
-                            counts[DESP_READY_TO_PREPARE] = counts[DESP_READY_TO_PREPARE]!! + 1
-                        } else counts[DESP_READY_TO_PRINT] = counts[DESP_READY_TO_PRINT]!! + 1
-                    } else {
-                        counts[DESP_PENDIENTES] = counts[DESP_PENDIENTES]!! + 1
+                else -> { // Asumiendo que cualquier otra cosa es "despacho"
+                    when (shipment.substatus) {
+                        "ready_to_print" -> {
+                            counts[DESP_READY_TO_PRINT] = counts[DESP_READY_TO_PRINT]!! + 1
+                        }
+                        "printed" -> {
+                            if (shipment.shippedItemsPhoto == null) {
+                                counts[DESP_READY_TO_PREPARE] = counts[DESP_READY_TO_PREPARE]!! + 1
+                            } else {
+                                counts[DESP_PENDIENTES] = counts[DESP_PENDIENTES]!! + 1
+                            }
+                        }
+                        else -> {
+                            Log.d("ShipmentAnalysis", "Despacho shipment ${shipment.id}" +
+                                    " is not categorized further here.")
+                        }
                     }
                 }
             }

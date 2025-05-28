@@ -7,7 +7,7 @@
       </SelectionState>
       <SelectionState runConfigName="FastPack.app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-05-22T00:33:32.328382100Z">
+        <DropdownSelection timestamp="2025-05-27T16:17:13.574741700Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="PhysicalDevice" identifier="serial=R5CW12FCWRZ" />
